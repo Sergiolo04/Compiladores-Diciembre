@@ -1,0 +1,16 @@
+programa_prueba_lexico_con_errores() {
+  const int identificador_excesivamente_larguisimo_que_supera_el_limite = 0;
+  var int x;
+  print("Inicio);
+
+  // Número demasiado grande
+  x = 3000000000;
+
+  // Caracteres invalidos mezclados
+  x = x + 5 @@@ 7 ### 9 €€€;
+
+  // Cadena sin cerrar
+  print("Esta cadena nunca se cierra...\n;
+
+  Comentario de bloque que
+     nunca llega a cerrarse
