@@ -71,12 +71,55 @@
 
     #include <stdio.h>
     #include <stdlib.h>
+    #include <string.h>
+    #include "listaSimbolos.h"
+    #include <stdbool.h>
+    #include "listaCodigo.h"
+    void generar_MIPS(ListaC codigo_final);   /* si no lo has puesto ya arriba */
 
+        /* Prototipos de las funciones de generación de código */
+    ListaC reduccion_NUM(char *numero);
+    ListaC reduccion_ID(char *identificador);
+    ListaC reduccion_expresion_negada(ListaC expresion);
+    ListaC reduccion_expresion_operacion_expresion(ListaC e1, ListaC e2, char *op);
+    ListaC reduccion_if_simple(ListaC condicion, ListaC bloque_if);
+    ListaC reduccion_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else);
+    ListaC reduccion_while(ListaC cond, ListaC cuerpo);
+    ListaC reduccion_print_item_expresion(ListaC expr);
+    ListaC reduccion_print_item_string(char *lexema);
+    ListaC reduccion_statment_list(ListaC lista, ListaC st);
+    ListaC reduccion_const_asignacion(char *id, ListaC expr);
+    ListaC reduccion_read_id(char *ident);
+    ListaC reduccion_asignacion(char *ident, ListaC expr);
+
+    char  *registro(void);
+    void   liberar_registro(char *reg);
+    void   generar_MIPS(ListaC codigo_final);
+    void   declarar_identificador(char *nombre);
+    Operacion nueva_operacion(char *operando, char *resultado,
+                          char *argumento1, char *argumento2);
     int yylex(void);
     void yyerror(const char *s);
     extern int yylineno;
 
-#line 80 "sintaxis.tab.c"
+    /* Tabla de símbolos global */
+    Lista tabla_de_simbolos;
+
+    /* Tipo que se está declarando en este momento (VARIABLE / CONSTANTE) */
+    Tipo tipo_actual;
+
+    /* Contador de errores semánticos */
+    int errores_semanticos = 0;
+    int contador_cadenas = 0;
+    int contador_etiquetas_de_salto = 1;
+    bool registros_en_uso[9];
+
+    /* Funciones auxiliares sobre la tabla de símbolos */
+    static int existe_simbolo(const char *nombre);
+    static void insertar_simbolo(const char *nombre, Tipo t);
+    static Tipo tipo_simbolo(const char *nombre);
+
+#line 123 "sintaxis.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -99,78 +142,7 @@
 #  endif
 # endif
 
-
-/* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
-#if YYDEBUG
-extern int yydebug;
-#endif
-
-/* Token kinds.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
-  {
-    YYEMPTY = -2,
-    YYEOF = 0,                     /* "end of file"  */
-    YYerror = 256,                 /* error  */
-    YYUNDEF = 257,                 /* "invalid token"  */
-    ID = 258,                      /* ID  */
-    NUM = 259,                     /* NUM  */
-    STRING = 260,                  /* STRING  */
-    VAR_DECL = 261,                /* VAR_DECL  */
-    CONST_DECL = 262,              /* CONST_DECL  */
-    INT_TYPE = 263,                /* INT_TYPE  */
-    IF_ST = 264,                   /* IF_ST  */
-    ELSE_ST = 265,                 /* ELSE_ST  */
-    WHILE_ST = 266,                /* WHILE_ST  */
-    PRINT_ST = 267,                /* PRINT_ST  */
-    READ_ST = 268,                 /* READ_ST  */
-    ASSIGN = 269,                  /* ASSIGN  */
-    ADD = 270,                     /* ADD  */
-    SUB = 271,                     /* SUB  */
-    MUL = 272,                     /* MUL  */
-    DIV = 273,                     /* DIV  */
-    LPAREN = 274,                  /* LPAREN  */
-    RPAREN = 275,                  /* RPAREN  */
-    LBRACE = 276,                  /* LBRACE  */
-    RBRACE = 277,                  /* RBRACE  */
-    COMMA = 278,                   /* COMMA  */
-    SEMIC = 279,                   /* SEMIC  */
-    QMARK = 280,                   /* QMARK  */
-    COLON = 281,                   /* COLON  */
-    LOWER_THAN_ELSE = 282          /* LOWER_THAN_ELSE  */
-  };
-  typedef enum yytokentype yytoken_kind_t;
-#endif
-
-/* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-union YYSTYPE
-{
-#line 11 "sintaxis.y"
-
-    char *str;   /* para IDs y cadenas */
-    long num;    /* para números */
-
-#line 159 "sintaxis.tab.c"
-
-};
-typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
-#endif
-
-
-extern YYSTYPE yylval;
-
-
-int yyparse (void);
-
-
-
+#include "sintaxis.tab.h"
 /* Symbol kind.  */
 enum yysymbol_kind_t
 {
@@ -179,8 +151,8 @@ enum yysymbol_kind_t
   YYSYMBOL_YYerror = 1,                    /* error  */
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
   YYSYMBOL_ID = 3,                         /* ID  */
-  YYSYMBOL_NUM = 4,                        /* NUM  */
-  YYSYMBOL_STRING = 5,                     /* STRING  */
+  YYSYMBOL_STRING = 4,                     /* STRING  */
+  YYSYMBOL_NUM = 5,                        /* NUM  */
   YYSYMBOL_VAR_DECL = 6,                   /* VAR_DECL  */
   YYSYMBOL_CONST_DECL = 7,                 /* CONST_DECL  */
   YYSYMBOL_INT_TYPE = 8,                   /* INT_TYPE  */
@@ -205,16 +177,19 @@ enum yysymbol_kind_t
   YYSYMBOL_LOWER_THAN_ELSE = 27,           /* LOWER_THAN_ELSE  */
   YYSYMBOL_YYACCEPT = 28,                  /* $accept  */
   YYSYMBOL_program = 29,                   /* program  */
-  YYSYMBOL_declarations = 30,              /* declarations  */
-  YYSYMBOL_tipo = 31,                      /* tipo  */
-  YYSYMBOL_var_list = 32,                  /* var_list  */
-  YYSYMBOL_const_list = 33,                /* const_list  */
-  YYSYMBOL_statement_list = 34,            /* statement_list  */
-  YYSYMBOL_statement = 35,                 /* statement  */
-  YYSYMBOL_print_list = 36,                /* print_list  */
-  YYSYMBOL_print_item = 37,                /* print_item  */
-  YYSYMBOL_read_list = 38,                 /* read_list  */
-  YYSYMBOL_expression = 39                 /* expression  */
+  YYSYMBOL_30_1 = 30,                      /* $@1  */
+  YYSYMBOL_declarations = 31,              /* declarations  */
+  YYSYMBOL_32_2 = 32,                      /* $@2  */
+  YYSYMBOL_33_3 = 33,                      /* $@3  */
+  YYSYMBOL_tipo = 34,                      /* tipo  */
+  YYSYMBOL_var_list = 35,                  /* var_list  */
+  YYSYMBOL_const_list = 36,                /* const_list  */
+  YYSYMBOL_statement_list = 37,            /* statement_list  */
+  YYSYMBOL_statement = 38,                 /* statement  */
+  YYSYMBOL_print_list = 39,                /* print_list  */
+  YYSYMBOL_print_item = 40,                /* print_item  */
+  YYSYMBOL_read_list = 41,                 /* read_list  */
+  YYSYMBOL_expression = 42                 /* expression  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -540,18 +515,18 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  4
+#define YYFINAL  3
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   116
+#define YYLAST   117
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  28
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  12
+#define YYNNTS  15
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  34
+#define YYNRULES  37
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  87
+#define YYNSTATES  90
 
 /* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   282
@@ -603,10 +578,10 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    36,    36,    41,    43,    46,    50,    55,    57,    62,
-      64,    69,    72,    76,    78,    80,    82,    84,    86,    88,
-      93,    95,   100,   102,   107,   109,   114,   116,   118,   120,
-     122,   124,   126,   128,   130
+       0,    92,    92,    92,   108,   108,   112,   112,   120,   126,
+     132,   134,   139,   143,   152,   155,   159,   163,   165,   167,
+     169,   171,   173,   178,   180,   185,   187,   194,   196,   207,
+     209,   211,   213,   215,   217,   219,   221,   223
 };
 #endif
 
@@ -622,13 +597,13 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of file\"", "error", "\"invalid token\"", "ID", "NUM", "STRING",
+  "\"end of file\"", "error", "\"invalid token\"", "ID", "STRING", "NUM",
   "VAR_DECL", "CONST_DECL", "INT_TYPE", "IF_ST", "ELSE_ST", "WHILE_ST",
   "PRINT_ST", "READ_ST", "ASSIGN", "ADD", "SUB", "MUL", "DIV", "LPAREN",
   "RPAREN", "LBRACE", "RBRACE", "COMMA", "SEMIC", "QMARK", "COLON",
-  "LOWER_THAN_ELSE", "$accept", "program", "declarations", "tipo",
-  "var_list", "const_list", "statement_list", "statement", "print_list",
-  "print_item", "read_list", "expression", YY_NULLPTR
+  "LOWER_THAN_ELSE", "$accept", "program", "$@1", "declarations", "$@2",
+  "$@3", "tipo", "var_list", "const_list", "statement_list", "statement",
+  "print_list", "print_item", "read_list", "expression", YY_NULLPTR
 };
 
 static const char *
@@ -638,7 +613,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-59)
+#define YYPACT_NINF (-58)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -652,15 +627,15 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-       4,    15,    16,    20,   -59,    30,   -59,    -1,    45,    45,
-       6,   -59,    53,    65,    60,    85,    86,    87,    88,   -59,
-     -59,   -59,   -59,    -3,    77,    40,    46,    46,    46,     7,
-      94,    26,   100,   -59,    46,   105,   -59,   -59,   -59,    46,
-      46,    61,    66,    72,   -59,     2,   -59,    84,   -59,    32,
-     -59,   -59,    84,    95,    49,    55,    46,    46,    46,    46,
-     -59,    33,    33,    89,     7,    90,   107,    46,   -59,    46,
-      49,    49,   -59,   -59,   101,   -59,   -59,   -59,   -59,   -59,
-      84,    43,    33,    46,   -59,    78,   -59
+     -58,    15,    18,   -58,    23,    17,    26,   -58,     1,    48,
+      48,     7,   -58,   -58,   -58,    46,    43,    45,    58,    60,
+     -58,   -58,   -58,    62,    77,     6,     6,     6,    47,    83,
+      27,   -58,     0,    61,    31,   -58,   -58,     6,     6,    67,
+      72,    78,   -58,   -17,   -58,    90,   -58,    -6,   -58,    94,
+     -58,     6,   100,   -58,    41,    56,     6,     6,     6,     6,
+     -58,    32,    32,    85,    47,    86,   108,   -58,    90,    98,
+     -58,     6,    41,    41,   -58,   -58,   103,   -58,   -58,   -58,
+     -58,   -58,     6,    52,    32,    90,     6,   -58,    84,   -58
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -668,29 +643,29 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,     0,     0,     0,     1,     0,     5,    12,     0,     0,
-       0,     6,     0,     0,     0,     0,     0,     0,     0,    12,
-       2,    11,     7,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     3,     0,     0,     4,    33,    34,     0,
-       0,     0,     0,     0,    23,     0,    20,    22,    24,     0,
-      14,     8,     9,     0,    31,     0,     0,     0,     0,     0,
-      13,     0,     0,     0,     0,     0,     0,     0,    32,     0,
-      26,    27,    28,    29,    16,    17,    18,    21,    19,    25,
-      10,     0,     0,     0,    15,     0,    30
+       2,     0,     0,     1,     0,     0,     0,     8,    15,     0,
+       0,     0,     9,     4,     6,     0,     0,     0,     0,     0,
+      15,     3,    14,     0,     0,     0,     0,     0,     0,     0,
+       0,    10,     0,     0,     0,    36,    37,     0,     0,     0,
+       0,     0,    26,     0,    23,    25,    27,     0,    17,     0,
+       5,     0,     0,     7,    34,     0,     0,     0,     0,     0,
+      16,     0,     0,     0,     0,     0,     0,    11,    12,     0,
+      35,     0,    29,    30,    31,    32,    19,    20,    21,    24,
+      22,    28,     0,     0,     0,    13,     0,    18,     0,    33
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -59,   -59,   -59,   103,   -59,   -59,    96,   -58,   -59,    52,
-     -59,   -26
+     -58,   -58,   -58,   -58,   -58,   -58,   104,   -58,   -58,    95,
+     -57,   -58,    53,   -58,   -25
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     2,     7,    12,    23,    25,    10,    21,    45,    46,
-      49,    47
+       0,     1,     2,     8,    23,    24,    13,    32,    34,    11,
+      22,    43,    44,    47,    45
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -698,67 +673,67 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      41,    42,    43,    74,    75,     8,     9,     1,    52,    14,
-      37,    38,    44,    54,    55,    15,     4,    16,    17,    18,
-      32,    33,    63,    39,    84,    64,    40,    19,    20,    14,
-      70,    71,    72,    73,     3,    15,    14,    16,    17,    18,
-       5,    80,    15,    81,    16,    17,    18,    19,    50,    37,
-      38,     6,    65,    11,    19,    66,    22,    85,    56,    57,
-      58,    59,    39,    35,    36,    40,    58,    59,    24,    83,
-      56,    57,    58,    59,    26,    68,    56,    57,    58,    59,
-      69,    56,    57,    58,    59,    60,    61,    56,    57,    58,
-      59,    34,    62,    56,    57,    58,    59,    48,    86,    56,
-      57,    58,    59,    51,    27,    28,    29,    30,    53,    67,
-      79,    82,    13,    76,    78,    31,    77
+      39,    40,    41,    63,    76,    77,    64,     9,    10,    35,
+      15,    36,    54,    55,    65,     3,    16,    66,    17,    18,
+      19,     4,    37,    49,    50,    38,    68,    87,    20,    21,
+      15,    72,    73,    74,    75,    15,    16,     6,    17,    18,
+      19,    16,     5,    17,    18,    19,    83,     7,    20,    48,
+      35,    42,    36,    20,    52,    53,    12,    85,    58,    59,
+      25,    88,    26,    37,    27,    31,    38,    56,    57,    58,
+      59,    56,    57,    58,    59,    51,    70,    28,    86,    29,
+      33,    71,    56,    57,    58,    59,    46,    56,    57,    58,
+      59,    60,    61,    56,    57,    58,    59,    67,    62,    56,
+      57,    58,    59,    69,    89,    56,    57,    58,    59,    78,
+      80,    81,    82,    84,    14,    30,     0,    79
 };
 
 static const yytype_int8 yycheck[] =
 {
-      26,    27,    28,    61,    62,     6,     7,     3,    34,     3,
-       3,     4,     5,    39,    40,     9,     0,    11,    12,    13,
-      23,    24,    20,    16,    82,    23,    19,    21,    22,     3,
-      56,    57,    58,    59,    19,     9,     3,    11,    12,    13,
-      20,    67,     9,    69,    11,    12,    13,    21,    22,     3,
-       4,    21,    20,     8,    21,    23,     3,    83,    15,    16,
-      17,    18,    16,    23,    24,    19,    17,    18,     3,    26,
-      15,    16,    17,    18,    14,    20,    15,    16,    17,    18,
-      25,    15,    16,    17,    18,    24,    20,    15,    16,    17,
-      18,    14,    20,    15,    16,    17,    18,     3,    20,    15,
-      16,    17,    18,     3,    19,    19,    19,    19,     3,    14,
-       3,    10,     9,    24,    24,    19,    64
+      25,    26,    27,    20,    61,    62,    23,     6,     7,     3,
+       3,     5,    37,    38,    20,     0,     9,    23,    11,    12,
+      13,     3,    16,    23,    24,    19,    51,    84,    21,    22,
+       3,    56,    57,    58,    59,     3,     9,    20,    11,    12,
+      13,     9,    19,    11,    12,    13,    71,    21,    21,    22,
+       3,     4,     5,    21,    23,    24,     8,    82,    17,    18,
+      14,    86,    19,    16,    19,     3,    19,    15,    16,    17,
+      18,    15,    16,    17,    18,    14,    20,    19,    26,    19,
+       3,    25,    15,    16,    17,    18,     3,    15,    16,    17,
+      18,    24,    20,    15,    16,    17,    18,     3,    20,    15,
+      16,    17,    18,     3,    20,    15,    16,    17,    18,    24,
+      24,     3,    14,    10,    10,    20,    -1,    64
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,    29,    19,     0,    20,    21,    30,     6,     7,
-      34,     8,    31,    31,     3,     9,    11,    12,    13,    21,
-      22,    35,     3,    32,     3,    33,    14,    19,    19,    19,
-      19,    34,    23,    24,    14,    23,    24,     3,     4,    16,
-      19,    39,    39,    39,     5,    36,    37,    39,     3,    38,
-      22,     3,    39,     3,    39,    39,    15,    16,    17,    18,
-      24,    20,    20,    20,    23,    20,    23,    14,    20,    25,
-      39,    39,    39,    39,    35,    35,    24,    37,    24,     3,
-      39,    39,    10,    26,    35,    39,    20
+       0,    29,    30,     0,     3,    19,    20,    21,    31,     6,
+       7,    37,     8,    34,    34,     3,     9,    11,    12,    13,
+      21,    22,    38,    32,    33,    14,    19,    19,    19,    19,
+      37,     3,    35,     3,    36,     3,     5,    16,    19,    42,
+      42,    42,     4,    39,    40,    42,     3,    41,    22,    23,
+      24,    14,    23,    24,    42,    42,    15,    16,    17,    18,
+      24,    20,    20,    20,    23,    20,    23,     3,    42,     3,
+      20,    25,    42,    42,    42,    42,    38,    38,    24,    40,
+      24,     3,    14,    42,    10,    42,    26,    38,    42,    20
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    28,    29,    30,    30,    30,    31,    32,    32,    33,
-      33,    34,    34,    35,    35,    35,    35,    35,    35,    35,
-      36,    36,    37,    37,    38,    38,    39,    39,    39,    39,
-      39,    39,    39,    39,    39
+       0,    28,    30,    29,    32,    31,    33,    31,    31,    34,
+      35,    35,    36,    36,    37,    37,    38,    38,    38,    38,
+      38,    38,    38,    39,    39,    40,    40,    41,    41,    42,
+      42,    42,    42,    42,    42,    42,    42,    42
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     7,     5,     5,     0,     1,     1,     3,     3,
-       5,     2,     0,     4,     3,     7,     5,     5,     5,     5,
-       1,     3,     1,     1,     1,     3,     3,     3,     3,     3,
-       7,     2,     3,     1,     1
+       0,     2,     0,     8,     0,     6,     0,     6,     0,     1,
+       1,     3,     3,     5,     2,     0,     4,     3,     7,     5,
+       5,     5,     5,     1,     3,     1,     1,     1,     3,     3,
+       3,     3,     3,     7,     2,     3,     1,     1
 };
 
 
@@ -1221,206 +1196,258 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2: /* program: ID LPAREN RPAREN LBRACE declarations statement_list RBRACE  */
-#line 37 "sintaxis.y"
-      { printf("Aplica regla: program -> id ( ) { declarations statement_list }\n"); }
-#line 1228 "sintaxis.tab.c"
+  case 2: /* $@1: %empty  */
+#line 92 "sintaxis.y"
+      { tabla_de_simbolos = creaLS(); 
+        for(int i=0; i<9; i++){
+          registros_en_uso[i] = false;
+        }
+    }
+#line 1207 "sintaxis.tab.c"
     break;
 
-  case 3: /* declarations: declarations VAR_DECL tipo var_list SEMIC  */
-#line 42 "sintaxis.y"
-      { printf("Aplica regla: declarations -> declarations var tipo var_list ;\n"); }
-#line 1234 "sintaxis.tab.c"
+  case 3: /* program: $@1 ID LPAREN RPAREN LBRACE declarations statement_list RBRACE  */
+#line 98 "sintaxis.y"
+      {
+        if (errores_semanticos == 0) {
+            concatenaLC((yyvsp[-2].codigo), (yyvsp[-1].codigo)); 
+            generar_MIPS((yyvsp[-2].codigo));   
+        }
+      }
+#line 1218 "sintaxis.tab.c"
     break;
 
-  case 4: /* declarations: declarations CONST_DECL tipo const_list SEMIC  */
-#line 44 "sintaxis.y"
-      { printf("Aplica regla: declarations -> declarations const tipo const_list ;\n"); }
-#line 1240 "sintaxis.tab.c"
-    break;
-
-  case 5: /* declarations: %empty  */
-#line 46 "sintaxis.y"
-      { printf("Aplica regla: declarations -> λ\n"); }
-#line 1246 "sintaxis.tab.c"
-    break;
-
-  case 6: /* tipo: INT_TYPE  */
-#line 51 "sintaxis.y"
-      { printf("Aplica regla: tipo -> int\n"); }
-#line 1252 "sintaxis.tab.c"
-    break;
-
-  case 7: /* var_list: ID  */
-#line 56 "sintaxis.y"
-      { printf("Aplica regla: var_list -> id\n"); }
-#line 1258 "sintaxis.tab.c"
-    break;
-
-  case 8: /* var_list: var_list COMMA ID  */
-#line 58 "sintaxis.y"
-      { printf("Aplica regla: var_list -> var_list , id\n"); }
-#line 1264 "sintaxis.tab.c"
-    break;
-
-  case 9: /* const_list: ID ASSIGN expression  */
-#line 63 "sintaxis.y"
-      { printf("Aplica regla: const_list -> id = expression\n"); }
-#line 1270 "sintaxis.tab.c"
-    break;
-
-  case 10: /* const_list: const_list COMMA ID ASSIGN expression  */
-#line 65 "sintaxis.y"
-      { printf("Aplica regla: const_list -> const_list , id = expression\n"); }
-#line 1276 "sintaxis.tab.c"
-    break;
-
-  case 11: /* statement_list: statement_list statement  */
-#line 70 "sintaxis.y"
-      { printf("Aplica regla: statement_list -> statement_list statement\n"); }
-#line 1282 "sintaxis.tab.c"
-    break;
-
-  case 12: /* statement_list: %empty  */
-#line 72 "sintaxis.y"
-      { printf("Aplica regla: statement_list -> λ\n"); }
-#line 1288 "sintaxis.tab.c"
-    break;
-
-  case 13: /* statement: ID ASSIGN expression SEMIC  */
-#line 77 "sintaxis.y"
-      { printf("Aplica regla: statement -> id = expression ;\n"); }
-#line 1294 "sintaxis.tab.c"
-    break;
-
-  case 14: /* statement: LBRACE statement_list RBRACE  */
-#line 79 "sintaxis.y"
-      { printf("Aplica regla: statement -> { statement_list }\n"); }
-#line 1300 "sintaxis.tab.c"
-    break;
-
-  case 15: /* statement: IF_ST LPAREN expression RPAREN statement ELSE_ST statement  */
-#line 81 "sintaxis.y"
-      { printf("Aplica regla: statement -> if ( expression ) statement else statement\n"); }
-#line 1306 "sintaxis.tab.c"
-    break;
-
-  case 16: /* statement: IF_ST LPAREN expression RPAREN statement  */
-#line 83 "sintaxis.y"
-      { printf("Aplica regla: statement -> if ( expression ) statement\n"); }
-#line 1312 "sintaxis.tab.c"
-    break;
-
-  case 17: /* statement: WHILE_ST LPAREN expression RPAREN statement  */
-#line 85 "sintaxis.y"
-      { printf("Aplica regla: statement -> while ( expression ) statement\n"); }
-#line 1318 "sintaxis.tab.c"
-    break;
-
-  case 18: /* statement: PRINT_ST LPAREN print_list RPAREN SEMIC  */
-#line 87 "sintaxis.y"
-      { printf("Aplica regla: statement -> print ( print_list ) ;\n"); }
-#line 1324 "sintaxis.tab.c"
-    break;
-
-  case 19: /* statement: READ_ST LPAREN read_list RPAREN SEMIC  */
-#line 89 "sintaxis.y"
-      { printf("Aplica regla: statement -> read ( read_list ) ;\n"); }
-#line 1330 "sintaxis.tab.c"
-    break;
-
-  case 20: /* print_list: print_item  */
-#line 94 "sintaxis.y"
-      { printf("Aplica regla: print_list -> print_item\n"); }
-#line 1336 "sintaxis.tab.c"
-    break;
-
-  case 21: /* print_list: print_list COMMA print_item  */
-#line 96 "sintaxis.y"
-      { printf("Aplica regla: print_list -> print_list , print_item\n"); }
-#line 1342 "sintaxis.tab.c"
-    break;
-
-  case 22: /* print_item: expression  */
-#line 101 "sintaxis.y"
-      { printf("Aplica regla: print_item -> expression\n"); }
-#line 1348 "sintaxis.tab.c"
-    break;
-
-  case 23: /* print_item: STRING  */
-#line 103 "sintaxis.y"
-      { printf("Aplica regla: print_item -> string\n"); }
-#line 1354 "sintaxis.tab.c"
-    break;
-
-  case 24: /* read_list: ID  */
+  case 4: /* $@2: %empty  */
 #line 108 "sintaxis.y"
-      { printf("Aplica regla: read_list -> id\n"); }
-#line 1360 "sintaxis.tab.c"
+                                   { tipo_actual = VARIABLE; }
+#line 1224 "sintaxis.tab.c"
     break;
 
-  case 25: /* read_list: read_list COMMA ID  */
-#line 110 "sintaxis.y"
-      { printf("Aplica regla: read_list -> read_list , id\n"); }
-#line 1366 "sintaxis.tab.c"
+  case 5: /* declarations: declarations VAR_DECL tipo $@2 var_list SEMIC  */
+#line 109 "sintaxis.y"
+        {
+          (yyval.codigo) = (yyvsp[-5].codigo);
+        }
+#line 1232 "sintaxis.tab.c"
     break;
 
-  case 26: /* expression: expression ADD expression  */
-#line 115 "sintaxis.y"
-      { printf("Aplica regla: expression -> expression + expression\n"); }
-#line 1372 "sintaxis.tab.c"
+  case 6: /* $@3: %empty  */
+#line 112 "sintaxis.y"
+                                     { tipo_actual = CONSTANTE; }
+#line 1238 "sintaxis.tab.c"
     break;
 
-  case 27: /* expression: expression SUB expression  */
-#line 117 "sintaxis.y"
-      { printf("Aplica regla: expression -> expression - expression\n"); }
-#line 1378 "sintaxis.tab.c"
+  case 7: /* declarations: declarations CONST_DECL tipo $@3 const_list SEMIC  */
+#line 113 "sintaxis.y"
+        {
+        if (errores_semanticos == 0) {
+            concatenaLC((yyvsp[-5].codigo), (yyvsp[-1].codigo)); 
+        }
+        (yyval.codigo) = (yyvsp[-5].codigo); 
+      }
+#line 1249 "sintaxis.tab.c"
     break;
 
-  case 28: /* expression: expression MUL expression  */
-#line 119 "sintaxis.y"
-      { printf("Aplica regla: expression -> expression * expression\n"); }
-#line 1384 "sintaxis.tab.c"
+  case 8: /* declarations: %empty  */
+#line 120 "sintaxis.y"
+        {
+          (yyval.codigo) = creaLC();
+        }
+#line 1257 "sintaxis.tab.c"
     break;
 
-  case 29: /* expression: expression DIV expression  */
-#line 121 "sintaxis.y"
-      { printf("Aplica regla: expression -> expression / expression\n"); }
-#line 1390 "sintaxis.tab.c"
-    break;
-
-  case 30: /* expression: LPAREN expression QMARK expression COLON expression RPAREN  */
-#line 123 "sintaxis.y"
-      { printf("Aplica regla: expression -> ( expression ? expression : expression )\n"); }
-#line 1396 "sintaxis.tab.c"
-    break;
-
-  case 31: /* expression: SUB expression  */
-#line 125 "sintaxis.y"
-      { printf("Aplica regla: expression -> - expression\n"); }
-#line 1402 "sintaxis.tab.c"
-    break;
-
-  case 32: /* expression: LPAREN expression RPAREN  */
+  case 9: /* tipo: INT_TYPE  */
 #line 127 "sintaxis.y"
-      { printf("Aplica regla: expression -> ( expression )\n"); }
-#line 1408 "sintaxis.tab.c"
+      { }
+#line 1263 "sintaxis.tab.c"
     break;
 
-  case 33: /* expression: ID  */
-#line 129 "sintaxis.y"
-      { printf("Aplica regla: expression -> id\n"); }
-#line 1414 "sintaxis.tab.c"
+  case 10: /* var_list: ID  */
+#line 133 "sintaxis.y"
+      { declarar_identificador((yyvsp[0].str)); }
+#line 1269 "sintaxis.tab.c"
     break;
 
-  case 34: /* expression: NUM  */
-#line 131 "sintaxis.y"
-      { printf("Aplica regla: expression -> num\n"); }
-#line 1420 "sintaxis.tab.c"
+  case 11: /* var_list: var_list COMMA ID  */
+#line 135 "sintaxis.y"
+      { declarar_identificador((yyvsp[0].str)); }
+#line 1275 "sintaxis.tab.c"
+    break;
+
+  case 12: /* const_list: ID ASSIGN expression  */
+#line 140 "sintaxis.y"
+      {
+        (yyval.codigo) = reduccion_const_asignacion((yyvsp[-2].str), (yyvsp[0].codigo));
+      }
+#line 1283 "sintaxis.tab.c"
+    break;
+
+  case 13: /* const_list: const_list COMMA ID ASSIGN expression  */
+#line 144 "sintaxis.y"
+      {
+        ListaC nuevo = reduccion_const_asignacion((yyvsp[-2].str), (yyvsp[0].codigo));
+        if (errores_semanticos == 0) concatenaLC((yyvsp[-4].codigo), nuevo);
+        (yyval.codigo) = (yyvsp[-4].codigo);
+      }
+#line 1293 "sintaxis.tab.c"
+    break;
+
+  case 14: /* statement_list: statement_list statement  */
+#line 153 "sintaxis.y"
+      { (yyval.codigo) = reduccion_statment_list((yyvsp[-1].codigo), (yyvsp[0].codigo)); }
+#line 1299 "sintaxis.tab.c"
+    break;
+
+  case 15: /* statement_list: %empty  */
+#line 155 "sintaxis.y"
+      { (yyval.codigo) = creaLC(); }
+#line 1305 "sintaxis.tab.c"
+    break;
+
+  case 16: /* statement: ID ASSIGN expression SEMIC  */
+#line 160 "sintaxis.y"
+      {
+        (yyval.codigo) = reduccion_asignacion((yyvsp[-3].str), (yyvsp[-1].codigo));
+      }
+#line 1313 "sintaxis.tab.c"
+    break;
+
+  case 17: /* statement: LBRACE statement_list RBRACE  */
+#line 164 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-1].codigo); }
+#line 1319 "sintaxis.tab.c"
+    break;
+
+  case 18: /* statement: IF_ST LPAREN expression RPAREN statement ELSE_ST statement  */
+#line 166 "sintaxis.y"
+      { (yyval.codigo) = reduccion_if_else((yyvsp[-4].codigo), (yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1325 "sintaxis.tab.c"
+    break;
+
+  case 19: /* statement: IF_ST LPAREN expression RPAREN statement  */
+#line 168 "sintaxis.y"
+      { (yyval.codigo) = reduccion_if_simple((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1331 "sintaxis.tab.c"
+    break;
+
+  case 20: /* statement: WHILE_ST LPAREN expression RPAREN statement  */
+#line 170 "sintaxis.y"
+      { (yyval.codigo) = reduccion_while((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1337 "sintaxis.tab.c"
+    break;
+
+  case 21: /* statement: PRINT_ST LPAREN print_list RPAREN SEMIC  */
+#line 172 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-2].codigo); }
+#line 1343 "sintaxis.tab.c"
+    break;
+
+  case 22: /* statement: READ_ST LPAREN read_list RPAREN SEMIC  */
+#line 174 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-2].codigo); }
+#line 1349 "sintaxis.tab.c"
+    break;
+
+  case 23: /* print_list: print_item  */
+#line 179 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[0].codigo); }
+#line 1355 "sintaxis.tab.c"
+    break;
+
+  case 24: /* print_list: print_list COMMA print_item  */
+#line 181 "sintaxis.y"
+      { if (errores_semanticos == 0) concatenaLC((yyvsp[-2].codigo),(yyvsp[0].codigo)); (yyval.codigo) = (yyvsp[-2].codigo); }
+#line 1361 "sintaxis.tab.c"
+    break;
+
+  case 25: /* print_item: expression  */
+#line 186 "sintaxis.y"
+      { (yyval.codigo) = reduccion_print_item_expresion((yyvsp[0].codigo)); }
+#line 1367 "sintaxis.tab.c"
+    break;
+
+  case 26: /* print_item: STRING  */
+#line 188 "sintaxis.y"
+      { 
+        (yyval.codigo) = reduccion_print_item_string((yyvsp[0].str));
+      }
+#line 1375 "sintaxis.tab.c"
+    break;
+
+  case 27: /* read_list: ID  */
+#line 195 "sintaxis.y"
+      { (yyval.codigo) = reduccion_read_id((yyvsp[0].str)); }
+#line 1381 "sintaxis.tab.c"
+    break;
+
+  case 28: /* read_list: read_list COMMA ID  */
+#line 197 "sintaxis.y"
+      {
+        ListaC nuevo = reduccion_read_id((yyvsp[0].str));
+        if (errores_semanticos == 0) {
+            concatenaLC((yyvsp[-2].codigo), nuevo);
+        }
+        (yyval.codigo) = (yyvsp[-2].codigo);
+      }
+#line 1393 "sintaxis.tab.c"
+    break;
+
+  case 29: /* expression: expression ADD expression  */
+#line 208 "sintaxis.y"
+      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "add"); }
+#line 1399 "sintaxis.tab.c"
+    break;
+
+  case 30: /* expression: expression SUB expression  */
+#line 210 "sintaxis.y"
+      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "sub"); }
+#line 1405 "sintaxis.tab.c"
+    break;
+
+  case 31: /* expression: expression MUL expression  */
+#line 212 "sintaxis.y"
+      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "mul"); }
+#line 1411 "sintaxis.tab.c"
+    break;
+
+  case 32: /* expression: expression DIV expression  */
+#line 214 "sintaxis.y"
+      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "div"); }
+#line 1417 "sintaxis.tab.c"
+    break;
+
+  case 33: /* expression: LPAREN expression QMARK expression COLON expression RPAREN  */
+#line 216 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-5].codigo); }
+#line 1423 "sintaxis.tab.c"
+    break;
+
+  case 34: /* expression: SUB expression  */
+#line 218 "sintaxis.y"
+      { (yyval.codigo) = reduccion_expresion_negada((yyvsp[0].codigo)); }
+#line 1429 "sintaxis.tab.c"
+    break;
+
+  case 35: /* expression: LPAREN expression RPAREN  */
+#line 220 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-1].codigo); }
+#line 1435 "sintaxis.tab.c"
+    break;
+
+  case 36: /* expression: ID  */
+#line 222 "sintaxis.y"
+      { (yyval.codigo) = reduccion_ID((yyvsp[0].str)); }
+#line 1441 "sintaxis.tab.c"
+    break;
+
+  case 37: /* expression: NUM  */
+#line 224 "sintaxis.y"
+      { (yyval.codigo) = reduccion_NUM((yyvsp[0].str)); }
+#line 1447 "sintaxis.tab.c"
     break;
 
 
-#line 1424 "sintaxis.tab.c"
+#line 1451 "sintaxis.tab.c"
 
       default: break;
     }
@@ -1613,9 +1640,424 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 134 "sintaxis.y"
+#line 227 "sintaxis.y"
 
+
+/* ========================= */
+/*   CÓDIGO C DE APOYO       */
+/* ========================= */
 
 void yyerror(const char *s) {
     fprintf(stderr, "Error sintactico en linea %d: %s\n", yylineno, s);
+}
+
+int main(void) {
+    int res = yyparse();
+    if (res == 0 && errores_semanticos == 0) {
+        printf("Analisis sintactico y semantico correcto.\n");
+    } else if (res == 0) {
+        printf("Analisis sintactico correcto, pero hay %d errores semanticos.\n",
+               errores_semanticos);
+    }
+    return res;
+}
+
+/* --------- Funciones auxiliares sobre la tabla de símbolos ---------- */
+
+static int existe_simbolo(const char *nombre) {
+    PosicionLista p = buscaLS(tabla_de_simbolos, (char *)nombre);
+    return p != finalLS(tabla_de_simbolos);
+}
+
+static void insertar_simbolo(const char *nombre, Tipo t) {
+    Simbolo s;
+    s.nombre = strdup(nombre);
+    s.tipo   = t;
+    if (t == CADENA) {
+        s.valor = contador_cadenas;
+    } else {
+        s.valor = 0;
+    }
+    insertaLS(tabla_de_simbolos, finalLS(tabla_de_simbolos), s);
+}
+
+static Tipo tipo_simbolo(const char *nombre) {
+    PosicionLista p = buscaLS(tabla_de_simbolos, (char *)nombre);
+    if (p == finalLS(tabla_de_simbolos)) {
+        /* No debería llamarse sin comprobar antes existe_simbolo */
+        return VARIABLE;
+    }
+    Simbolo s = recuperaLS(tabla_de_simbolos, p);
+    return s.tipo;
+}
+
+char* registro(void) {
+    for (int i = 0; i < 9; i++) {
+        if (!registros_en_uso[i]) {
+            registros_en_uso[i] = true;
+            char *reg;
+            asprintf(&reg, "$t%d", i);
+            return reg;
+        }
+    }
+    yyerror("No quedan registros libres");
+    return NULL;
+}
+
+
+ListaC reduccion_NUM(char *numero){
+  if(errores_semanticos > 0) return NULL;
+  ListaC lista = creaLC();
+  char *r = registro();
+  insertaLC(lista, finalLC(lista),nueva_operacion("li",r,numero,NULL));
+  guardaResLC(lista,r); 
+  return lista;
+}
+
+ListaC reduccion_ID(char *identificador){
+  if (!existe_simbolo(identificador)) {
+    fprintf(stderr, "Error semantico (linea %d): variable '%s' usada sin declarar\n", yylineno, identificador);
+    errores_semanticos++;
+  }
+  if(errores_semanticos > 0) return NULL;
+  ListaC lista = creaLC();
+  char *r = registro();
+  char *id;
+  asprintf(&id,"_%s",identificador);
+  insertaLC(lista, finalLC(lista), nueva_operacion("lw", r, id, NULL));
+  guardaResLC(lista,r);
+  return lista;
+}
+
+ListaC reduccion_expresion_negada(ListaC expresion){
+  if(errores_semanticos > 0) return NULL;
+  insertaLC(expresion,finalLC(expresion),nueva_operacion("neg",recuperaResLC(expresion),recuperaResLC(expresion),0));
+  return expresion;
+}
+
+ListaC reduccion_expresion_operacion_expresion(ListaC expresion1, ListaC expresion2, char *operando){
+    if(errores_semanticos > 0) return NULL;
+    concatenaLC(expresion1,expresion2);
+    insertaLC(expresion1,finalLC(expresion1),nueva_operacion(operando,recuperaResLC(expresion1),recuperaResLC(expresion1),recuperaResLC(expresion2)));
+    liberar_registro(recuperaResLC(expresion2));
+    return expresion1; 
+}
+
+Operacion nueva_operacion(char *operando, char *resultado,char *argumento1,char *argumenton2 ){
+    Operacion operacion_creada;
+    operacion_creada.op = operando;
+    operacion_creada.res = resultado;
+    operacion_creada.arg1 = argumento1;
+    operacion_creada.arg2 = argumenton2;
+    return operacion_creada;
+} 
+
+void liberar_registro(char *reg) {
+    int num = -1;
+
+    if (sscanf(reg, "$t%d", &num) != 1) { //si sscanf consigue leer un entero devuelve 1 (si no, devuelve 0)
+        fprintf(stderr, "Error: formato de registro inválido (%s)\n", reg);
+        return;
+    }
+
+    if (num < 0 || num >= 9) {
+        fprintf(stderr, "Error: número de registro fuera de rango (%d)\n", num);
+        return;
+    }
+
+    if (!registros_en_uso[num]) {
+        fprintf(stderr, "Aviso: intento de liberar un registro que ya esta libre (%s)\n", reg);
+        return;
+    }
+
+    registros_en_uso[num] = false;
+}
+
+ListaC reduccion_if_simple(ListaC condicion, ListaC bloque_if) {
+    if (errores_semanticos > 0) return NULL;
+    char *etq_fin;
+    asprintf(&etq_fin, "$l%d", contador_etiquetas_de_salto++);
+    char *reg_cond = recuperaResLC(condicion);
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("beqz", reg_cond, etq_fin, NULL)
+    );
+    liberar_registro(reg_cond);
+    concatenaLC(condicion, bloque_if);
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("etiq", etq_fin, NULL, NULL)
+    );
+    return condicion;
+}
+
+ListaC reduccion_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else) {
+    if (errores_semanticos > 0) return NULL;
+    char *etq_else;
+    char *etq_fin;
+    asprintf(&etq_else, "$l%d", contador_etiquetas_de_salto++);
+    asprintf(&etq_fin,  "$l%d", contador_etiquetas_de_salto++);
+    char *reg_cond = recuperaResLC(condicion);
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("beqz", reg_cond, etq_else, NULL)
+    );
+    liberar_registro(reg_cond);
+    concatenaLC(condicion, bloque_if);
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("j", etq_fin, NULL, NULL)
+    );
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("etiq", etq_else, NULL, NULL)
+    );
+    concatenaLC(condicion, bloque_else);
+    insertaLC(
+        condicion,
+        finalLC(condicion),
+        nueva_operacion("etiq", etq_fin, NULL, NULL)
+    );
+    return condicion;
+}
+
+ListaC reduccion_while(ListaC cond, ListaC cuerpo) {
+    if (errores_semanticos > 0) return NULL;
+    char *etq_inicio;
+    char *etq_salida;
+    asprintf(&etq_inicio, "$l%d", contador_etiquetas_de_salto++);
+    asprintf(&etq_salida, "$l%d", contador_etiquetas_de_salto++);
+    ListaC resultado = creaLC();
+    insertaLC(resultado, 
+        finalLC(resultado),
+        nueva_operacion("etiq", etq_inicio, NULL, NULL)
+    );
+    concatenaLC(resultado, cond);
+    char *reg_cond = recuperaResLC(cond);
+    insertaLC(resultado, 
+        finalLC(resultado),
+        nueva_operacion("beqz", reg_cond, etq_salida, NULL)
+    );
+    liberar_registro(reg_cond);
+    concatenaLC(resultado, cuerpo);
+    insertaLC(resultado, 
+        finalLC(resultado),
+        nueva_operacion("j", etq_inicio, NULL, NULL)
+    );
+    insertaLC(resultado, 
+        finalLC(resultado),
+        nueva_operacion("etiq", etq_salida, NULL, NULL)
+    );
+    return resultado;
+}
+
+ListaC reduccion_print_item_expresion(ListaC expr) {
+    if (errores_semanticos > 0) return NULL;
+    char *rtmp = recuperaResLC(expr);
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("move","$a0",rtmp,NULL)
+    );
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("li","$v0","1",NULL)
+    );
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("syscall",NULL,NULL,NULL)
+    );
+    liberar_registro(rtmp);
+    return expr;
+}
+
+ListaC reduccion_print_item_string(char *lexema){
+    if (errores_semanticos > 0) return NULL;
+    insertar_simbolo(lexema, CADENA);
+    ListaC salida = creaLC();
+    char *etiqueta;
+    asprintf(&etiqueta, "$str%d", contador_cadenas);
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("la", "$a0", etiqueta, NULL)   // cargar dirección de la cadena
+    );
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("li", "$v0", "4", NULL)       // servicio print_string
+    );
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("syscall", NULL, NULL, NULL)
+    );
+    contador_cadenas++;
+    return salida;
+}
+
+
+ListaC reduccion_statment_list(ListaC statement_list, ListaC statement){
+  if (errores_semanticos > 0) return NULL;
+  concatenaLC(statement_list, statement);
+  return statement_list;
+}
+
+ListaC reduccion_const_asignacion(char *identificador, ListaC expresion_derecha) {
+    if (existe_simbolo(identificador)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): identificador '%s' redeclarado\n",
+                yylineno, identificador);
+        errores_semanticos++;
+        return expresion_derecha; 
+    }
+    insertar_simbolo(identificador, CONSTANTE);
+    if (errores_semanticos > 0) 
+        return expresion_derecha;
+    Operacion operacion;
+    operacion.op = "sw";
+    operacion.arg2 = NULL;
+    asprintf(&operacion.res, "%s", recuperaResLC(expresion_derecha));
+    asprintf(&operacion.arg1, "_%s", identificador);
+    insertaLC(expresion_derecha, finalLC(expresion_derecha), operacion);
+    liberar_registro(recuperaResLC(expresion_derecha));
+    return expresion_derecha;
+}
+
+void declarar_identificador(char *nombre){
+    if (existe_simbolo(nombre)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' redeclarada\n",
+                yylineno, nombre);
+        errores_semanticos++;
+    } else {
+        insertar_simbolo(nombre, tipo_actual);
+    }
+}
+
+ListaC reduccion_read_id(char *ident) {
+    if (!existe_simbolo(ident)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' usada sin declarar en read\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return creaLC();
+    }
+    if (tipo_simbolo(ident) == CONSTANTE) {
+        fprintf(stderr,
+                "Error semantico (linea %d): no se puede hacer read sobre la constante '%s'\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return creaLC();
+    }
+    if (errores_semanticos > 0) {
+        return creaLC();
+    }
+    ListaC codigo = creaLC();
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("li", "$v0", "5", NULL)
+    );
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("syscall", NULL, NULL, NULL)
+    );
+    char *dest;
+    asprintf(&dest, "_%s", ident);
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("sw", "$v0", dest, NULL)
+    );
+    return codigo;
+}
+
+ListaC reduccion_asignacion(char *ident, ListaC expr) {
+    if (!existe_simbolo(ident)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' usada sin declarar\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;   // devolvemos la lista tal cual, sin añadir sw
+    }
+    if (tipo_simbolo(ident) == CONSTANTE) {
+        fprintf(stderr,
+                "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;
+    }
+    if (errores_semanticos > 0) {
+        return expr;
+    }
+    char *reg_res = recuperaResLC(expr);
+    char *dest;
+    asprintf(&dest, "_%s", ident);
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("sw", reg_res, dest, NULL)
+    );
+    liberar_registro(reg_res);
+    return expr;
+}
+
+void generar_MIPS(ListaC codigo_final) {
+    FILE *f = fopen("output.asm", "w");
+    if (!f) {
+        perror("No se pudo abrir output.asm");
+        exit(1);
+    }
+    fprintf(f, ".data\n");
+    if (tabla_de_simbolos != NULL) {
+        PosicionLista p = inicioLS(tabla_de_simbolos);
+        while (p != finalLS(tabla_de_simbolos)) {
+            Simbolo s = recuperaLS(tabla_de_simbolos, p);
+            if (s.tipo == CADENA) {
+                fprintf(f, "$str%d: .asciiz %s\n", s.valor, s.nombre);
+            } else {
+                fprintf(f, "_%s: .word %d\n", s.nombre, s.valor);
+            }
+            p = siguienteLS(tabla_de_simbolos, p);
+        }
+    }
+
+    /* --- SEGMENTO .text --- */
+    fprintf(f, "\n.text\n");
+    fprintf(f, ".globl main\n");
+    fprintf(f, "main:\n");
+
+    /* --- VOLCAR LISTA DE CÓDIGO --- */
+    PosicionListaC q = inicioLC(codigo_final);
+
+    while (q != finalLC(codigo_final)) {
+        Operacion op = recuperaLC(codigo_final, q);
+
+        if (strcmp(op.op, "etiq") == 0) {
+            fprintf(f, "%s:\n", op.res);
+        } else {
+            fprintf(f, "%s", op.op);
+            if (op.res)  fprintf(f, " %s", op.res);
+            if (op.arg1) fprintf(f, ", %s", op.arg1);
+            if (op.arg2) fprintf(f, ", %s", op.arg2);
+            fprintf(f, "\n");
+        }
+
+        q = siguienteLC(codigo_final, q);
+    }
+
+    /* --- FINAL DEL PROGRAMA --- */
+    fprintf(f, "li $v0, 10\n");
+    fprintf(f, "syscall\n");
+
+    fclose(f);
 }

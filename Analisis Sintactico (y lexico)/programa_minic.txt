@@ -1,0 +1,7 @@
+main() {
+    var int a, b;
+    a = 5;
+    b = a + 2;
+    print(a);
+    print(b);
+}

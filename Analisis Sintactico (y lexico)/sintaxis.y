@@ -3,24 +3,43 @@
     #include <stdlib.h>
     #include <string.h>
     #include "listaSimbolos.h"
+    #include <stdbool.h>
+    #include "listaCodigo.h"
+    void generar_MIPS(ListaC codigo_final);
 
+    ListaC reduccion_NUM(char *numero);
+    ListaC reduccion_ID(char *identificador);
+    ListaC reduccion_expresion_negada(ListaC expresion);
+    ListaC reduccion_expresion_operacion_expresion(ListaC e1, ListaC e2, char *op);
+    ListaC reduccion_if_simple(ListaC condicion, ListaC bloque_if);
+    ListaC reduccion_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else);
+    ListaC reduccion_while(ListaC cond, ListaC cuerpo);
+    ListaC reduccion_print_item_expresion(ListaC expr);
+    ListaC reduccion_print_item_string(char *lexema);
+    ListaC reduccion_statment_list(ListaC lista, ListaC st);
+    ListaC reduccion_const_asignacion(char *id, ListaC expr);
+    ListaC reduccion_read_id(char *ident);
+    ListaC reduccion_asignacion(char *ident, ListaC expr);
+
+    char  *registro(void);
+    void   liberar_registro(char *reg);
+    void   generar_MIPS(ListaC codigo_final);
+    void   declarar_identificador(char *nombre);
+    Operacion nueva_operacion(char *operando, char *resultado,
+                          char *argumento1, char *argumento2);
     int yylex(void);
     void yyerror(const char *s);
     extern int yylineno;
 
-    /* Tabla de símbolos global */
     Lista tabla_de_simbolos;
 
-    /* Tipo que se está declarando en este momento (VARIABLE / CONSTANTE) */
     Tipo tipo_actual;
 
-    /* Contador de errores semánticos */
     int errores_semanticos = 0;
     int contador_cadenas = 0;
     int contador_etiquetas_de_salto = 1;
     bool registros_en_uso[9];
 
-    /* Funciones auxiliares sobre la tabla de símbolos */
     static int existe_simbolo(const char *nombre);
     static void insertar_simbolo(const char *nombre, Tipo t);
     static Tipo tipo_simbolo(const char *nombre);
@@ -30,7 +49,7 @@
   #include "listaCodigo.h"
 }
 
-/* ---------- Valores semánticos ---------- */
+
 %union {
     char *str;   /* para ID y STRING */
     ListaC codigo;
@@ -38,14 +57,13 @@
 
 /* TOKENS con campo del %union */
 %token <str> ID STRING NUM
-%type <codigo> expression statement print_list print_item
+%type <codigo> expression statement print_list print_item statement_list declarations const_list read_list
 
 %token VAR_DECL CONST_DECL INT_TYPE IF_ST ELSE_ST WHILE_ST PRINT_ST READ_ST
 %token ASSIGN ADD SUB MUL DIV
 %token LPAREN RPAREN LBRACE RBRACE
 %token COMMA SEMIC QMARK COLON
 
-/* Precedencias */
 %left  ADD SUB
 %left  MUL DIV
 %right ASSIGN
@@ -58,148 +76,85 @@
 %start program
 
 %%
-
-/* ===================================================== */
-/*       GRAMÁTICA + ACCIONES SEMÁNTICAS BÁSICAS        */
-/* ===================================================== */
-
-/* program → id ( ) { declarations statement_list } */
 program
-    : { tabla_de_simbolos = creaLS(); }
+    : { tabla_de_simbolos = creaLS(); 
+        for(int i=0; i<9; i++){
+          registros_en_uso[i] = false;
+        }
+    }
       ID LPAREN RPAREN LBRACE declarations statement_list RBRACE
       {
-        printf("Aplica regla: program -> id ( ) { declarations statement_list }\n");
+        if (errores_semanticos == 0) {
+            concatenaLC($6, $7); 
+            generar_MIPS($6);   
+        }
       }
     ;
 
-/* declarations → declarations VAR tipo var_list ;
-                | declarations CONST tipo const_list ;
-                | λ
-*/
-declarations
-    : declarations VAR_DECL tipo { tipo_actual = VARIABLE; } var_list SEMIC
-      {
-        printf("Aplica regla: declarations -> declarations var tipo var_list ;\n");
+  declarations
+      : declarations VAR_DECL tipo { tipo_actual = VARIABLE; } var_list SEMIC
+        {
+          $$ = $1;
+        }
+      | declarations CONST_DECL tipo { tipo_actual = CONSTANTE; } const_list SEMIC
+        {
+        if (errores_semanticos == 0) {
+            concatenaLC($1, $5); 
+        }
+        $$ = $1; 
       }
-    | declarations CONST_DECL tipo { tipo_actual = CONSTANTE; } const_list SEMIC
-      {
-        printf("Aplica regla: declarations -> declarations const tipo const_list ;\n");
-      }
-    | /* vacío */
-      {
-        printf("Aplica regla: declarations -> λ\n");
-      }
-    ;
+      | 
+        {
+          $$ = creaLC();
+        }
+      ;
 
-/* tipo → int (ahora mismo no hacemos nada más con él) */
 tipo
     : INT_TYPE
-      {
-        printf("Aplica regla: tipo -> int\n");
-      }
+      { }
     ;
 
-/* var_list → id
-            | var_list , id
-   Aquí insertamos variables en la tabla y comprobamos redeclaraciones.
-*/
+
 var_list
     : ID
-      {
-        if (existe_simbolo($1)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): variable '%s' redeclarada\n",
-                    yylineno, $1);
-            errores_semanticos++;
-        } else {
-            insertar_simbolo($1, tipo_actual);  /* VARIABLE */
-        }
-        printf("Aplica regla: var_list -> id\n");
-      }
+      { declarar_identificador($1); }
     | var_list COMMA ID
-      {
-        if (existe_simbolo($3)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): variable '%s' redeclarada\n",
-                    yylineno, $3);
-            errores_semanticos++;
-        } else {
-            insertar_simbolo($3, tipo_actual);  /* VARIABLE */
-        }
-        printf("Aplica regla: var_list -> var_list , id\n");
-      }
+      { declarar_identificador($3); }
     ;
 
-/* const_list → id = expression
-              | const_list , id = expression
-   Aquí insertamos constantes y también comprobamos redeclaraciones.
-*/
 const_list
     : ID ASSIGN expression
       {
-        if (existe_simbolo($1)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): identificador '%s' redeclarado\n",
-                    yylineno, $1);
-            errores_semanticos++;
-        } else {
-            insertar_simbolo($1, CONSTANTE);
-        }
-        printf("Aplica regla: const_list -> id = expression\n");
+        $$ = reduccion_const_asignacion($1, $3);
       }
     | const_list COMMA ID ASSIGN expression
       {
-        if (existe_simbolo($3)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): identificador '%s' redeclarado\n",
-                    yylineno, $3);
-            errores_semanticos++;
-        } else {
-            insertar_simbolo($3, CONSTANTE);
-        }
-        printf("Aplica regla: const_list -> const_list , id = expression\n");
+        ListaC nuevo = reduccion_const_asignacion($3, $5);
+        if (errores_semanticos == 0) concatenaLC($1, nuevo);
+        $$ = $1;
       }
     ;
 
-/* statement_list → statement_list statement
-                  | λ
-*/
 statement_list
     : statement_list statement
-      { printf("Aplica regla: statement_list -> statement_list statement\n"); }
-    | /* vacío */
-      { printf("Aplica regla: statement_list -> λ\n"); }
+      { $$ = reduccion_statment_list($1, $2); }
+    | 
+      { $$ = creaLC(); }
     ;
 
-/* statement con semántica en la asignación:
-
-   - LHS debe existir.
-   - LHS no puede ser CONSTANTE.
-*/
 statement
     : ID ASSIGN expression SEMIC
       {
-        if (!existe_simbolo($1)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): variable '%s' usada sin declarar\n",
-                    yylineno, $1);
-            errores_semanticos++;
-        } else if (tipo_simbolo($1) == CONSTANTE) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
-                    yylineno, $1);
-            errores_semanticos++;
-        }
-        printf("Aplica regla: statement -> id = expression ;\n");
+        $$ = reduccion_asignacion($1, $3);
       }
     | LBRACE statement_list RBRACE
       { $$ = $2; }
     | IF_ST LPAREN expression RPAREN statement ELSE_ST statement
       { $$ = reduccion_if_else($3, $5, $7); }
     | IF_ST LPAREN expression RPAREN statement %prec LOWER_THAN_ELSE
-      { $$ = reduccion_if_simple(); }
+      { $$ = reduccion_if_simple($3, $5); }
     | WHILE_ST LPAREN expression RPAREN statement
-      { $$ = reduccion_while(); }
+      { $$ = reduccion_while($3, $5); }
     | PRINT_ST LPAREN print_list RPAREN SEMIC
       { $$ = $3; }
     | READ_ST LPAREN read_list RPAREN SEMIC
@@ -215,41 +170,23 @@ print_list
 
 print_item
     : expression
-      { 
-        $$ = reduccion_print_item_expresion($1);
-        liberar_registro(recuperaResLC($1)); 
-      }
+      { $$ = reduccion_print_item_expresion($1); }
     | STRING
       { 
-        insertar_simbolo($1, CADENA);
-        contador_cadenas++;
-        $$ = reduccion_print_item_string("aqui hay que pasarle una cadena que ya investigaré como pasarch");
+        $$ = reduccion_print_item_string($1);
       }
     ;
 
-/* read_list → id | read_list , id
-   Aquí también comprobamos que las variables a leer estén declaradas.
-*/
 read_list
     : ID
-      {
-        if (!existe_simbolo($1)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): variable '%s' usada sin declarar en read\n",
-                    yylineno, $1);
-            errores_semanticos++;
-        }
-        printf("Aplica regla: read_list -> id\n");
-      }
+      { $$ = reduccion_read_id($1); }
     | read_list COMMA ID
       {
-        if (!existe_simbolo($3)) {
-            fprintf(stderr,
-                    "Error semantico (linea %d): variable '%s' usada sin declarar en read\n",
-                    yylineno, $3);
-            errores_semanticos++;
+        ListaC nuevo = reduccion_read_id($3);
+        if (errores_semanticos == 0) {
+            concatenaLC($1, nuevo);
         }
-        printf("Aplica regla: read_list -> read_list , id\n");
+        $$ = $1;
       }
     ;
 
@@ -263,7 +200,7 @@ expression
     | expression DIV expression
       { $$ = reduccion_expresion_operacion_expresion($1, $3, "div"); }
     | LPAREN expression QMARK expression COLON expression RPAREN
-      { $$ = $2 }
+      { $$ = $2; }
     | SUB expression
       { $$ = reduccion_expresion_negada($2); }
     | LPAREN expression RPAREN
@@ -275,10 +212,6 @@ expression
     ;
 
 %%
-
-/* ========================= */
-/*   CÓDIGO C DE APOYO       */
-/* ========================= */
 
 void yyerror(const char *s) {
     fprintf(stderr, "Error sintactico en linea %d: %s\n", yylineno, s);
@@ -295,8 +228,6 @@ int main(void) {
     return res;
 }
 
-/* --------- Funciones auxiliares sobre la tabla de símbolos ---------- */
-
 static int existe_simbolo(const char *nombre) {
     PosicionLista p = buscaLS(tabla_de_simbolos, (char *)nombre);
     return p != finalLS(tabla_de_simbolos);
@@ -306,7 +237,11 @@ static void insertar_simbolo(const char *nombre, Tipo t) {
     Simbolo s;
     s.nombre = strdup(nombre);
     s.tipo   = t;
-    s.valor  = 0;     /* por ahora no lo usamos */
+    if (t == CADENA) {
+        s.valor = contador_cadenas;
+    } else {
+        s.valor = 0;
+    }
     insertaLS(tabla_de_simbolos, finalLS(tabla_de_simbolos), s);
 }
 
@@ -320,29 +255,21 @@ static Tipo tipo_simbolo(const char *nombre) {
     return s.tipo;
 }
 
-static boolean es_constante(){
-
-}
-
-static void imprimirTablaS(){
-
-}
-
-char* registro(){
-  int i = 0;
-  wile(i<9){
-    if(!registros_en_uso[i]) {
-        registros_en_uso[i] = true;
-        char* registro;
-        asprintf(&registro,"$t%d",i);
-        return registro;
+char* registro(void) {
+    for (int i = 0; i < 9; i++) {
+        if (!registros_en_uso[i]) {
+            registros_en_uso[i] = true;
+            char *reg;
+            asprintf(&reg, "$t%d", i);
+            return reg;
+        }
     }
-    i++;
-  }
-  yyerror("No quedan registros libres");
+    yyerror("No quedan registros libres");
+    return NULL;
 }
 
-ListaC reduccion_NUM(ListaC numero){
+
+ListaC reduccion_NUM(char *numero){
   if(errores_semanticos > 0) return NULL;
   ListaC lista = creaLC();
   char *r = registro();
@@ -351,7 +278,7 @@ ListaC reduccion_NUM(ListaC numero){
   return lista;
 }
 
-ListaC reduccion_ID(ListaC identificador){
+ListaC reduccion_ID(char *identificador){
   if (!existe_simbolo(identificador)) {
     fprintf(stderr, "Error semantico (linea %d): variable '%s' usada sin declarar\n", yylineno, identificador);
     errores_semanticos++;
@@ -382,10 +309,10 @@ ListaC reduccion_expresion_operacion_expresion(ListaC expresion1, ListaC expresi
 
 Operacion nueva_operacion(char *operando, char *resultado,char *argumento1,char *argumenton2 ){
     Operacion operacion_creada;
-    operacion.op = operando;
-    operacion.res = resultado;
-    operacion.arg1 = argumento1;
-    operacion.arg2 = argumenton2;
+    operacion_creada.op = operando;
+    operacion_creada.res = resultado;
+    operacion_creada.arg1 = argumento1;
+    operacion_creada.arg2 = argumenton2;
     return operacion_creada;
 } 
 
@@ -511,6 +438,187 @@ ListaC reduccion_print_item_expresion(ListaC expr) {
         finalLC(expr),
         nueva_operacion("syscall",NULL,NULL,NULL)
     );
-
+    liberar_registro(rtmp);
     return expr;
+}
+
+ListaC reduccion_print_item_string(char *lexema){
+    if (errores_semanticos > 0) return NULL;
+    insertar_simbolo(lexema, CADENA);
+    ListaC salida = creaLC();
+    char *etiqueta;
+    asprintf(&etiqueta, "$str%d", contador_cadenas);
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("la", "$a0", etiqueta, NULL)   // cargar dirección de la cadena
+    );
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("li", "$v0", "4", NULL)       // servicio print_string
+    );
+    insertaLC(
+        salida,
+        finalLC(salida),
+        nueva_operacion("syscall", NULL, NULL, NULL)
+    );
+    contador_cadenas++;
+    return salida;
+}
+
+
+ListaC reduccion_statment_list(ListaC statement_list, ListaC statement){
+  if (errores_semanticos > 0) return NULL;
+  concatenaLC(statement_list, statement);
+  return statement_list;
+}
+
+ListaC reduccion_const_asignacion(char *identificador, ListaC expresion_derecha) {
+    if (existe_simbolo(identificador)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): identificador '%s' redeclarado\n",
+                yylineno, identificador);
+        errores_semanticos++;
+        return expresion_derecha; 
+    }
+    insertar_simbolo(identificador, CONSTANTE);
+    if (errores_semanticos > 0) 
+        return expresion_derecha;
+    Operacion operacion;
+    operacion.op = "sw";
+    operacion.arg2 = NULL;
+    asprintf(&operacion.res, "%s", recuperaResLC(expresion_derecha));
+    asprintf(&operacion.arg1, "_%s", identificador);
+    insertaLC(expresion_derecha, finalLC(expresion_derecha), operacion);
+    liberar_registro(recuperaResLC(expresion_derecha));
+    return expresion_derecha;
+}
+
+void declarar_identificador(char *nombre){
+    if (existe_simbolo(nombre)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' redeclarada\n",
+                yylineno, nombre);
+        errores_semanticos++;
+    } else {
+        insertar_simbolo(nombre, tipo_actual);
+    }
+}
+
+ListaC reduccion_read_id(char *ident) {
+    if (!existe_simbolo(ident)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' usada sin declarar en read\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return creaLC();
+    }
+    if (tipo_simbolo(ident) == CONSTANTE) {
+        fprintf(stderr,
+                "Error semantico (linea %d): no se puede hacer read sobre la constante '%s'\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return creaLC();
+    }
+    if (errores_semanticos > 0) {
+        return creaLC();
+    }
+    ListaC codigo = creaLC();
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("li", "$v0", "5", NULL)
+    );
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("syscall", NULL, NULL, NULL)
+    );
+    char *dest;
+    asprintf(&dest, "_%s", ident);
+    insertaLC(
+        codigo,
+        finalLC(codigo),
+        nueva_operacion("sw", "$v0", dest, NULL)
+    );
+    return codigo;
+}
+
+ListaC reduccion_asignacion(char *ident, ListaC expr) {
+    if (!existe_simbolo(ident)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' usada sin declarar\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;   // devolvemos la lista tal cual, sin añadir sw
+    }
+    if (tipo_simbolo(ident) == CONSTANTE) {
+        fprintf(stderr,
+                "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;
+    }
+    if (errores_semanticos > 0) {
+        return expr;
+    }
+    char *reg_res = recuperaResLC(expr);
+    char *dest;
+    asprintf(&dest, "_%s", ident);
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("sw", reg_res, dest, NULL)
+    );
+    liberar_registro(reg_res);
+    return expr;
+}
+
+void generar_MIPS(ListaC codigo_final) {
+    FILE *f = fopen("output.asm", "w");
+    if (!f) {
+        perror("No se pudo abrir output.asm");
+        exit(1);
+    }
+    fprintf(f, ".data\n");
+    if (tabla_de_simbolos != NULL) {
+        PosicionLista p = inicioLS(tabla_de_simbolos);
+        while (p != finalLS(tabla_de_simbolos)) {
+            Simbolo s = recuperaLS(tabla_de_simbolos, p);
+            if (s.tipo == CADENA) {
+                fprintf(f, "$str%d: .asciiz %s\n", s.valor, s.nombre);
+            } else {
+                fprintf(f, "_%s: .word %d\n", s.nombre, s.valor);
+            }
+            p = siguienteLS(tabla_de_simbolos, p);
+        }
+    }
+
+    fprintf(f, "\n.text\n");
+    fprintf(f, ".globl main\n");
+    fprintf(f, "main:\n");
+
+    PosicionListaC q = inicioLC(codigo_final);
+
+    while (q != finalLC(codigo_final)) {
+        Operacion op = recuperaLC(codigo_final, q);
+
+        if (strcmp(op.op, "etiq") == 0) {
+            fprintf(f, "%s:\n", op.res);
+        } else {
+            fprintf(f, "%s", op.op);
+            if (op.res)  fprintf(f, " %s", op.res);
+            if (op.arg1) fprintf(f, ", %s", op.arg1);
+            if (op.arg2) fprintf(f, ", %s", op.arg2);
+            fprintf(f, "\n");
+        }
+
+        q = siguienteLC(codigo_final, q);
+    }
+
+    fprintf(f, "li $v0, 10\n");
+    fprintf(f, "syscall\n");
+
+    fclose(f);
 }

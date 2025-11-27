@@ -1021,7 +1021,7 @@ YY_RULE_SETUP
     if (val > 2147483648)
         fprintf(stderr, "Número fuera de rango en línea %d\n", yylineno);
 
-    yylval.num = val;
+    yylval.str = strdup(yytext);
     return NUM;
 }
 	YY_BREAK
@@ -2064,5 +2064,6 @@ void yyfree (void * ptr )
 #define YYTABLES_NAME "yytables"
 
 #line 121 "lexico.l"
+
 
 

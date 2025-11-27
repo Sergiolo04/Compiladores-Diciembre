@@ -44,6 +44,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 53 "sintaxis.y"
+
+  #include "listaCodigo.h"
+
+#line 53 "sintaxis.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -55,8 +61,8 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     ID = 258,                      /* ID  */
-    NUM = 259,                     /* NUM  */
-    STRING = 260,                  /* STRING  */
+    STRING = 259,                  /* STRING  */
+    NUM = 260,                     /* NUM  */
     VAR_DECL = 261,                /* VAR_DECL  */
     CONST_DECL = 262,              /* CONST_DECL  */
     INT_TYPE = 263,                /* INT_TYPE  */
@@ -87,12 +93,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 11 "sintaxis.y"
+#line 58 "sintaxis.y"
 
-    char *str;   /* para IDs y cadenas */
-    long num;    /* para números */
+    char *str;   /* para ID y STRING */
+    ListaC codigo;
 
-#line 96 "sintaxis.tab.h"
+#line 102 "sintaxis.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
