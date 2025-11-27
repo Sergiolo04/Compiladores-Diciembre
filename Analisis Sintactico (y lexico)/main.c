@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int yyparse(void);        // Generado por Bison
-extern int yylineno;      // Línea actual (la exporta Flex/Bison)
-extern FILE *yyin;        // Flujo de entrada que usa el lexer
+int yyparse(void);       
+extern int yylineno;      
+extern FILE *yyin;        
 
 int main(int argc, char **argv) {
-    // Si me pasan un fichero por parámetro, lo uso como entrada
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
         if (!yyin) {
@@ -14,7 +13,6 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-
     int res = yyparse();  // Llama al analizador sintáctico (que a su vez llama al léxico)
 
     if (res == 0) {

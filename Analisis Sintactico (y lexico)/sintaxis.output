@@ -2,79 +2,89 @@ Grammar
 
     0 $accept: program $end
 
-    1 program: ID LPAREN RPAREN LBRACE declarations statement_list RBRACE
+    1 $@1: ε
 
-    2 declarations: declarations VAR_DECL tipo var_list SEMIC
-    3             | declarations CONST_DECL tipo const_list SEMIC
-    4             | ε
+    2 program: $@1 ID LPAREN RPAREN LBRACE declarations statement_list RBRACE
 
-    5 tipo: INT_TYPE
+    3 $@2: ε
 
-    6 var_list: ID
-    7         | var_list COMMA ID
+    4 declarations: declarations VAR_DECL tipo $@2 var_list SEMIC
 
-    8 const_list: ID ASSIGN expression
-    9           | const_list COMMA ID ASSIGN expression
+    5 $@3: ε
 
-   10 statement_list: statement_list statement
-   11               | ε
+    6 declarations: declarations CONST_DECL tipo $@3 const_list SEMIC
+    7             | ε
 
-   12 statement: ID ASSIGN expression SEMIC
-   13          | LBRACE statement_list RBRACE
-   14          | IF_ST LPAREN expression RPAREN statement ELSE_ST statement
-   15          | IF_ST LPAREN expression RPAREN statement
-   16          | WHILE_ST LPAREN expression RPAREN statement
-   17          | PRINT_ST LPAREN print_list RPAREN SEMIC
-   18          | READ_ST LPAREN read_list RPAREN SEMIC
+    8 tipo: INT_TYPE
 
-   19 print_list: print_item
-   20           | print_list COMMA print_item
+    9 var_list: ID
+   10         | var_list COMMA ID
 
-   21 print_item: expression
-   22           | STRING
+   11 const_list: ID ASSIGN expression
+   12           | const_list COMMA ID ASSIGN expression
 
-   23 read_list: ID
-   24          | read_list COMMA ID
+   13 statement_list: statement_list statement
+   14               | ε
 
-   25 expression: expression ADD expression
-   26           | expression SUB expression
-   27           | expression MUL expression
-   28           | expression DIV expression
-   29           | LPAREN expression QMARK expression COLON expression RPAREN
-   30           | SUB expression
-   31           | LPAREN expression RPAREN
-   32           | ID
-   33           | NUM
+   15 statement: ID ASSIGN asig SEMIC
+   16          | LBRACE statement_list RBRACE
+   17          | IF_ST LPAREN expression RPAREN statement ELSE_ST statement
+   18          | IF_ST LPAREN expression RPAREN statement
+   19          | WHILE_ST LPAREN expression RPAREN statement
+   20          | PRINT_ST LPAREN print_list RPAREN SEMIC
+   21          | READ_ST LPAREN read_list RPAREN SEMIC
+
+   22 asig: ID ASSIGN asig
+   23     | expression
+
+   24 print_list: print_item
+   25           | print_list COMMA print_item
+
+   26 print_item: expression
+   27           | STRING
+
+   28 read_list: ID
+   29          | read_list COMMA ID
+
+   30 expression: expression ADD expression
+   31           | expression SUB expression
+   32           | expression MUL expression
+   33           | expression DIV expression
+   34           | LPAREN expression QMARK expression COLON expression RPAREN
+   35           | SUB expression
+   36           | LPAREN expression RPAREN
+   37           | ID
+   38           | NUM
 
 
 Terminals, with rules where they appear
 
     $end (0) 0
     error (256)
-    ID (258) 1 6 7 8 9 12 23 24 32
-    NUM (259) 33
-    STRING (260) 22
-    VAR_DECL (261) 2
-    CONST_DECL (262) 3
-    INT_TYPE (263) 5
-    IF_ST (264) 14 15
-    ELSE_ST (265) 14
-    WHILE_ST (266) 16
-    PRINT_ST (267) 17
-    READ_ST (268) 18
-    ASSIGN (269) 8 9 12
-    ADD (270) 25
-    SUB (271) 26 30
-    MUL (272) 27
-    DIV (273) 28
-    LPAREN (274) 1 14 15 16 17 18 29 31
-    RPAREN (275) 1 14 15 16 17 18 29 31
-    LBRACE (276) 1 13
-    RBRACE (277) 1 13
-    COMMA (278) 7 9 20 24
-    SEMIC (279) 2 3 12 17 18
-    QMARK (280) 29
-    COLON (281) 29
+    ID <str> (258) 2 9 10 11 12 15 22 28 29 37
+    STRING <str> (259) 27
+    NUM <str> (260) 38
+    VAR_DECL (261) 4
+    CONST_DECL (262) 6
+    INT_TYPE (263) 8
+    IF_ST (264) 17 18
+    ELSE_ST (265) 17
+    WHILE_ST (266) 19
+    PRINT_ST (267) 20
+    READ_ST (268) 21
+    ASSIGN (269) 11 12 15 22
+    ADD (270) 30
+    SUB (271) 31 35
+    MUL (272) 32
+    DIV (273) 33
+    LPAREN (274) 2 17 18 19 20 21 34 36
+    RPAREN (275) 2 17 18 19 20 21 34 36
+    LBRACE (276) 2 16
+    RBRACE (277) 2 16
+    COMMA (278) 10 12 25 29
+    SEMIC (279) 4 6 15 20 21
+    QMARK (280) 34
+    COLON (281) 34
     LOWER_THAN_ELSE (282)
 
 
@@ -83,908 +93,985 @@ Nonterminals, with rules where they appear
     $accept (28)
         on left: 0
     program (29)
-        on left: 1
+        on left: 2
         on right: 0
-    declarations (30)
-        on left: 2 3 4
-        on right: 1 2 3
-    tipo (31)
+    $@1 (30)
+        on left: 1
+        on right: 2
+    declarations <codigo> (31)
+        on left: 4 6 7
+        on right: 2 4 6
+    $@2 (32)
+        on left: 3
+        on right: 4
+    $@3 (33)
         on left: 5
-        on right: 2 3
-    var_list (32)
-        on left: 6 7
-        on right: 2 7
-    const_list (33)
-        on left: 8 9
-        on right: 3 9
-    statement_list (34)
-        on left: 10 11
-        on right: 1 10 13
-    statement (35)
-        on left: 12 13 14 15 16 17 18
-        on right: 10 14 15 16
-    print_list (36)
-        on left: 19 20
-        on right: 17 20
-    print_item (37)
-        on left: 21 22
-        on right: 19 20
-    read_list (38)
-        on left: 23 24
-        on right: 18 24
-    expression (39)
-        on left: 25 26 27 28 29 30 31 32 33
-        on right: 8 9 12 14 15 16 21 25 26 27 28 29 30 31
+        on right: 6
+    tipo (34)
+        on left: 8
+        on right: 4 6
+    var_list (35)
+        on left: 9 10
+        on right: 4 10
+    const_list <codigo> (36)
+        on left: 11 12
+        on right: 6 12
+    statement_list <codigo> (37)
+        on left: 13 14
+        on right: 2 13 16
+    statement <codigo> (38)
+        on left: 15 16 17 18 19 20 21
+        on right: 13 17 18 19
+    asig <codigo> (39)
+        on left: 22 23
+        on right: 15 22
+    print_list <codigo> (40)
+        on left: 24 25
+        on right: 20 25
+    print_item <codigo> (41)
+        on left: 26 27
+        on right: 24 25
+    read_list <codigo> (42)
+        on left: 28 29
+        on right: 21 29
+    expression <codigo> (43)
+        on left: 30 31 32 33 34 35 36 37 38
+        on right: 11 12 17 18 19 23 26 30 31 32 33 34 35 36
 
 
 State 0
 
     0 $accept: • program $end
 
-    ID  shift, and go to state 1
+    $default  reduce using rule 1 ($@1)
 
-    program  go to state 2
+    program  go to state 1
+    $@1      go to state 2
 
 
 State 1
 
-    1 program: ID • LPAREN RPAREN LBRACE declarations statement_list RBRACE
+    0 $accept: program • $end
 
-    LPAREN  shift, and go to state 3
+    $end  shift, and go to state 3
 
 
 State 2
 
-    0 $accept: program • $end
+    2 program: $@1 • ID LPAREN RPAREN LBRACE declarations statement_list RBRACE
 
-    $end  shift, and go to state 4
+    ID  shift, and go to state 4
 
 
 State 3
-
-    1 program: ID LPAREN • RPAREN LBRACE declarations statement_list RBRACE
-
-    RPAREN  shift, and go to state 5
-
-
-State 4
 
     0 $accept: program $end •
 
     $default  accept
 
 
+State 4
+
+    2 program: $@1 ID • LPAREN RPAREN LBRACE declarations statement_list RBRACE
+
+    LPAREN  shift, and go to state 5
+
+
 State 5
 
-    1 program: ID LPAREN RPAREN • LBRACE declarations statement_list RBRACE
+    2 program: $@1 ID LPAREN • RPAREN LBRACE declarations statement_list RBRACE
 
-    LBRACE  shift, and go to state 6
+    RPAREN  shift, and go to state 6
 
 
 State 6
 
-    1 program: ID LPAREN RPAREN LBRACE • declarations statement_list RBRACE
+    2 program: $@1 ID LPAREN RPAREN • LBRACE declarations statement_list RBRACE
 
-    $default  reduce using rule 4 (declarations)
-
-    declarations  go to state 7
+    LBRACE  shift, and go to state 7
 
 
 State 7
 
-    1 program: ID LPAREN RPAREN LBRACE declarations • statement_list RBRACE
-    2 declarations: declarations • VAR_DECL tipo var_list SEMIC
-    3             | declarations • CONST_DECL tipo const_list SEMIC
+    2 program: $@1 ID LPAREN RPAREN LBRACE • declarations statement_list RBRACE
 
-    VAR_DECL    shift, and go to state 8
-    CONST_DECL  shift, and go to state 9
+    $default  reduce using rule 7 (declarations)
 
-    $default  reduce using rule 11 (statement_list)
-
-    statement_list  go to state 10
+    declarations  go to state 8
 
 
 State 8
 
-    2 declarations: declarations VAR_DECL • tipo var_list SEMIC
+    2 program: $@1 ID LPAREN RPAREN LBRACE declarations • statement_list RBRACE
+    4 declarations: declarations • VAR_DECL tipo $@2 var_list SEMIC
+    6             | declarations • CONST_DECL tipo $@3 const_list SEMIC
 
-    INT_TYPE  shift, and go to state 11
+    VAR_DECL    shift, and go to state 9
+    CONST_DECL  shift, and go to state 10
 
-    tipo  go to state 12
+    $default  reduce using rule 14 (statement_list)
+
+    statement_list  go to state 11
 
 
 State 9
 
-    3 declarations: declarations CONST_DECL • tipo const_list SEMIC
+    4 declarations: declarations VAR_DECL • tipo $@2 var_list SEMIC
 
-    INT_TYPE  shift, and go to state 11
+    INT_TYPE  shift, and go to state 12
 
     tipo  go to state 13
 
 
 State 10
 
-    1 program: ID LPAREN RPAREN LBRACE declarations statement_list • RBRACE
-   10 statement_list: statement_list • statement
+    6 declarations: declarations CONST_DECL • tipo $@3 const_list SEMIC
 
-    ID        shift, and go to state 14
-    IF_ST     shift, and go to state 15
-    WHILE_ST  shift, and go to state 16
-    PRINT_ST  shift, and go to state 17
-    READ_ST   shift, and go to state 18
-    LBRACE    shift, and go to state 19
-    RBRACE    shift, and go to state 20
+    INT_TYPE  shift, and go to state 12
 
-    statement  go to state 21
+    tipo  go to state 14
 
 
 State 11
 
-    5 tipo: INT_TYPE •
+    2 program: $@1 ID LPAREN RPAREN LBRACE declarations statement_list • RBRACE
+   13 statement_list: statement_list • statement
 
-    $default  reduce using rule 5 (tipo)
+    ID        shift, and go to state 15
+    IF_ST     shift, and go to state 16
+    WHILE_ST  shift, and go to state 17
+    PRINT_ST  shift, and go to state 18
+    READ_ST   shift, and go to state 19
+    LBRACE    shift, and go to state 20
+    RBRACE    shift, and go to state 21
+
+    statement  go to state 22
 
 
 State 12
 
-    2 declarations: declarations VAR_DECL tipo • var_list SEMIC
+    8 tipo: INT_TYPE •
 
-    ID  shift, and go to state 22
-
-    var_list  go to state 23
+    $default  reduce using rule 8 (tipo)
 
 
 State 13
 
-    3 declarations: declarations CONST_DECL tipo • const_list SEMIC
+    4 declarations: declarations VAR_DECL tipo • $@2 var_list SEMIC
 
-    ID  shift, and go to state 24
+    $default  reduce using rule 3 ($@2)
 
-    const_list  go to state 25
+    $@2  go to state 23
 
 
 State 14
 
-   12 statement: ID • ASSIGN expression SEMIC
+    6 declarations: declarations CONST_DECL tipo • $@3 const_list SEMIC
 
-    ASSIGN  shift, and go to state 26
+    $default  reduce using rule 5 ($@3)
+
+    $@3  go to state 24
 
 
 State 15
 
-   14 statement: IF_ST • LPAREN expression RPAREN statement ELSE_ST statement
-   15          | IF_ST • LPAREN expression RPAREN statement
+   15 statement: ID • ASSIGN asig SEMIC
 
-    LPAREN  shift, and go to state 27
+    ASSIGN  shift, and go to state 25
 
 
 State 16
 
-   16 statement: WHILE_ST • LPAREN expression RPAREN statement
+   17 statement: IF_ST • LPAREN expression RPAREN statement ELSE_ST statement
+   18          | IF_ST • LPAREN expression RPAREN statement
 
-    LPAREN  shift, and go to state 28
+    LPAREN  shift, and go to state 26
 
 
 State 17
 
-   17 statement: PRINT_ST • LPAREN print_list RPAREN SEMIC
+   19 statement: WHILE_ST • LPAREN expression RPAREN statement
 
-    LPAREN  shift, and go to state 29
+    LPAREN  shift, and go to state 27
 
 
 State 18
 
-   18 statement: READ_ST • LPAREN read_list RPAREN SEMIC
+   20 statement: PRINT_ST • LPAREN print_list RPAREN SEMIC
 
-    LPAREN  shift, and go to state 30
+    LPAREN  shift, and go to state 28
 
 
 State 19
 
-   13 statement: LBRACE • statement_list RBRACE
+   21 statement: READ_ST • LPAREN read_list RPAREN SEMIC
 
-    $default  reduce using rule 11 (statement_list)
-
-    statement_list  go to state 31
+    LPAREN  shift, and go to state 29
 
 
 State 20
 
-    1 program: ID LPAREN RPAREN LBRACE declarations statement_list RBRACE •
+   16 statement: LBRACE • statement_list RBRACE
 
-    $default  reduce using rule 1 (program)
+    $default  reduce using rule 14 (statement_list)
+
+    statement_list  go to state 30
 
 
 State 21
 
-   10 statement_list: statement_list statement •
+    2 program: $@1 ID LPAREN RPAREN LBRACE declarations statement_list RBRACE •
 
-    $default  reduce using rule 10 (statement_list)
+    $default  reduce using rule 2 (program)
 
 
 State 22
 
-    6 var_list: ID •
+   13 statement_list: statement_list statement •
 
-    $default  reduce using rule 6 (var_list)
+    $default  reduce using rule 13 (statement_list)
 
 
 State 23
 
-    2 declarations: declarations VAR_DECL tipo var_list • SEMIC
-    7 var_list: var_list • COMMA ID
+    4 declarations: declarations VAR_DECL tipo $@2 • var_list SEMIC
 
-    COMMA  shift, and go to state 32
-    SEMIC  shift, and go to state 33
+    ID  shift, and go to state 31
+
+    var_list  go to state 32
 
 
 State 24
 
-    8 const_list: ID • ASSIGN expression
+    6 declarations: declarations CONST_DECL tipo $@3 • const_list SEMIC
 
-    ASSIGN  shift, and go to state 34
+    ID  shift, and go to state 33
+
+    const_list  go to state 34
 
 
 State 25
 
-    3 declarations: declarations CONST_DECL tipo const_list • SEMIC
-    9 const_list: const_list • COMMA ID ASSIGN expression
+   15 statement: ID ASSIGN • asig SEMIC
 
-    COMMA  shift, and go to state 35
-    SEMIC  shift, and go to state 36
+    ID      shift, and go to state 35
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    asig        go to state 39
+    expression  go to state 40
 
 
 State 26
 
-   12 statement: ID ASSIGN • expression SEMIC
+   17 statement: IF_ST LPAREN • expression RPAREN statement ELSE_ST statement
+   18          | IF_ST LPAREN • expression RPAREN statement
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 41
-
-
-State 27
-
-   14 statement: IF_ST LPAREN • expression RPAREN statement ELSE_ST statement
-   15          | IF_ST LPAREN • expression RPAREN statement
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
 
     expression  go to state 42
 
 
-State 28
+State 27
 
-   16 statement: WHILE_ST LPAREN • expression RPAREN statement
+   19 statement: WHILE_ST LPAREN • expression RPAREN statement
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
 
     expression  go to state 43
 
 
-State 29
+State 28
 
-   17 statement: PRINT_ST LPAREN • print_list RPAREN SEMIC
+   20 statement: PRINT_ST LPAREN • print_list RPAREN SEMIC
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
+    ID      shift, and go to state 41
     STRING  shift, and go to state 44
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
 
     print_list  go to state 45
     print_item  go to state 46
     expression  go to state 47
 
 
-State 30
+State 29
 
-   18 statement: READ_ST LPAREN • read_list RPAREN SEMIC
+   21 statement: READ_ST LPAREN • read_list RPAREN SEMIC
 
     ID  shift, and go to state 48
 
     read_list  go to state 49
 
 
-State 31
+State 30
 
-   10 statement_list: statement_list • statement
-   13 statement: LBRACE statement_list • RBRACE
+   13 statement_list: statement_list • statement
+   16 statement: LBRACE statement_list • RBRACE
 
-    ID        shift, and go to state 14
-    IF_ST     shift, and go to state 15
-    WHILE_ST  shift, and go to state 16
-    PRINT_ST  shift, and go to state 17
-    READ_ST   shift, and go to state 18
-    LBRACE    shift, and go to state 19
+    ID        shift, and go to state 15
+    IF_ST     shift, and go to state 16
+    WHILE_ST  shift, and go to state 17
+    PRINT_ST  shift, and go to state 18
+    READ_ST   shift, and go to state 19
+    LBRACE    shift, and go to state 20
     RBRACE    shift, and go to state 50
 
-    statement  go to state 21
+    statement  go to state 22
+
+
+State 31
+
+    9 var_list: ID •
+
+    $default  reduce using rule 9 (var_list)
 
 
 State 32
 
-    7 var_list: var_list COMMA • ID
+    4 declarations: declarations VAR_DECL tipo $@2 var_list • SEMIC
+   10 var_list: var_list • COMMA ID
 
-    ID  shift, and go to state 51
+    COMMA  shift, and go to state 51
+    SEMIC  shift, and go to state 52
 
 
 State 33
 
-    2 declarations: declarations VAR_DECL tipo var_list SEMIC •
+   11 const_list: ID • ASSIGN expression
 
-    $default  reduce using rule 2 (declarations)
+    ASSIGN  shift, and go to state 53
 
 
 State 34
 
-    8 const_list: ID ASSIGN • expression
+    6 declarations: declarations CONST_DECL tipo $@3 const_list • SEMIC
+   12 const_list: const_list • COMMA ID ASSIGN expression
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 52
+    COMMA  shift, and go to state 54
+    SEMIC  shift, and go to state 55
 
 
 State 35
 
-    9 const_list: const_list COMMA • ID ASSIGN expression
+   22 asig: ID • ASSIGN asig
+   37 expression: ID •
 
-    ID  shift, and go to state 53
+    ASSIGN  shift, and go to state 56
+
+    $default  reduce using rule 37 (expression)
 
 
 State 36
 
-    3 declarations: declarations CONST_DECL tipo const_list SEMIC •
+   38 expression: NUM •
 
-    $default  reduce using rule 3 (declarations)
+    $default  reduce using rule 38 (expression)
 
 
 State 37
 
-   32 expression: ID •
+   35 expression: SUB • expression
 
-    $default  reduce using rule 32 (expression)
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 57
 
 
 State 38
 
-   33 expression: NUM •
+   34 expression: LPAREN • expression QMARK expression COLON expression RPAREN
+   36           | LPAREN • expression RPAREN
 
-    $default  reduce using rule 33 (expression)
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 58
 
 
 State 39
 
-   30 expression: SUB • expression
+   15 statement: ID ASSIGN asig • SEMIC
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 54
+    SEMIC  shift, and go to state 59
 
 
 State 40
 
-   29 expression: LPAREN • expression QMARK expression COLON expression RPAREN
-   31           | LPAREN • expression RPAREN
+   23 asig: expression •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
+    ADD  shift, and go to state 60
+    SUB  shift, and go to state 61
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
 
-    expression  go to state 55
+    $default  reduce using rule 23 (asig)
 
 
 State 41
 
-   12 statement: ID ASSIGN expression • SEMIC
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
+   37 expression: ID •
 
-    ADD    shift, and go to state 56
-    SUB    shift, and go to state 57
-    MUL    shift, and go to state 58
-    DIV    shift, and go to state 59
-    SEMIC  shift, and go to state 60
+    $default  reduce using rule 37 (expression)
 
 
 State 42
 
-   14 statement: IF_ST LPAREN expression • RPAREN statement ELSE_ST statement
-   15          | IF_ST LPAREN expression • RPAREN statement
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
+   17 statement: IF_ST LPAREN expression • RPAREN statement ELSE_ST statement
+   18          | IF_ST LPAREN expression • RPAREN statement
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    ADD     shift, and go to state 56
-    SUB     shift, and go to state 57
-    MUL     shift, and go to state 58
-    DIV     shift, and go to state 59
-    RPAREN  shift, and go to state 61
+    ADD     shift, and go to state 60
+    SUB     shift, and go to state 61
+    MUL     shift, and go to state 62
+    DIV     shift, and go to state 63
+    RPAREN  shift, and go to state 64
 
 
 State 43
 
-   16 statement: WHILE_ST LPAREN expression • RPAREN statement
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
+   19 statement: WHILE_ST LPAREN expression • RPAREN statement
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    ADD     shift, and go to state 56
-    SUB     shift, and go to state 57
-    MUL     shift, and go to state 58
-    DIV     shift, and go to state 59
-    RPAREN  shift, and go to state 62
+    ADD     shift, and go to state 60
+    SUB     shift, and go to state 61
+    MUL     shift, and go to state 62
+    DIV     shift, and go to state 63
+    RPAREN  shift, and go to state 65
 
 
 State 44
 
-   22 print_item: STRING •
+   27 print_item: STRING •
 
-    $default  reduce using rule 22 (print_item)
+    $default  reduce using rule 27 (print_item)
 
 
 State 45
 
-   17 statement: PRINT_ST LPAREN print_list • RPAREN SEMIC
-   20 print_list: print_list • COMMA print_item
+   20 statement: PRINT_ST LPAREN print_list • RPAREN SEMIC
+   25 print_list: print_list • COMMA print_item
 
-    RPAREN  shift, and go to state 63
-    COMMA   shift, and go to state 64
+    RPAREN  shift, and go to state 66
+    COMMA   shift, and go to state 67
 
 
 State 46
 
-   19 print_list: print_item •
+   24 print_list: print_item •
 
-    $default  reduce using rule 19 (print_list)
+    $default  reduce using rule 24 (print_list)
 
 
 State 47
 
-   21 print_item: expression •
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
+   26 print_item: expression •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    ADD  shift, and go to state 56
-    SUB  shift, and go to state 57
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
+    ADD  shift, and go to state 60
+    SUB  shift, and go to state 61
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
 
-    $default  reduce using rule 21 (print_item)
+    $default  reduce using rule 26 (print_item)
 
 
 State 48
 
-   23 read_list: ID •
+   28 read_list: ID •
 
-    $default  reduce using rule 23 (read_list)
+    $default  reduce using rule 28 (read_list)
 
 
 State 49
 
-   18 statement: READ_ST LPAREN read_list • RPAREN SEMIC
-   24 read_list: read_list • COMMA ID
+   21 statement: READ_ST LPAREN read_list • RPAREN SEMIC
+   29 read_list: read_list • COMMA ID
 
-    RPAREN  shift, and go to state 65
-    COMMA   shift, and go to state 66
+    RPAREN  shift, and go to state 68
+    COMMA   shift, and go to state 69
 
 
 State 50
 
-   13 statement: LBRACE statement_list RBRACE •
-
-    $default  reduce using rule 13 (statement)
-
-
-State 51
-
-    7 var_list: var_list COMMA ID •
-
-    $default  reduce using rule 7 (var_list)
-
-
-State 52
-
-    8 const_list: ID ASSIGN expression •
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-
-    ADD  shift, and go to state 56
-    SUB  shift, and go to state 57
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
-
-    $default  reduce using rule 8 (const_list)
-
-
-State 53
-
-    9 const_list: const_list COMMA ID • ASSIGN expression
-
-    ASSIGN  shift, and go to state 67
-
-
-State 54
-
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-   30           | SUB expression •
-
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
-
-    $default  reduce using rule 30 (expression)
-
-
-State 55
-
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-   29           | LPAREN expression • QMARK expression COLON expression RPAREN
-   31           | LPAREN expression • RPAREN
-
-    ADD     shift, and go to state 56
-    SUB     shift, and go to state 57
-    MUL     shift, and go to state 58
-    DIV     shift, and go to state 59
-    RPAREN  shift, and go to state 68
-    QMARK   shift, and go to state 69
-
-
-State 56
-
-   25 expression: expression ADD • expression
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 70
-
-
-State 57
-
-   26 expression: expression SUB • expression
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 71
-
-
-State 58
-
-   27 expression: expression MUL • expression
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 72
-
-
-State 59
-
-   28 expression: expression DIV • expression
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 73
-
-
-State 60
-
-   12 statement: ID ASSIGN expression SEMIC •
-
-    $default  reduce using rule 12 (statement)
-
-
-State 61
-
-   14 statement: IF_ST LPAREN expression RPAREN • statement ELSE_ST statement
-   15          | IF_ST LPAREN expression RPAREN • statement
-
-    ID        shift, and go to state 14
-    IF_ST     shift, and go to state 15
-    WHILE_ST  shift, and go to state 16
-    PRINT_ST  shift, and go to state 17
-    READ_ST   shift, and go to state 18
-    LBRACE    shift, and go to state 19
-
-    statement  go to state 74
-
-
-State 62
-
-   16 statement: WHILE_ST LPAREN expression RPAREN • statement
-
-    ID        shift, and go to state 14
-    IF_ST     shift, and go to state 15
-    WHILE_ST  shift, and go to state 16
-    PRINT_ST  shift, and go to state 17
-    READ_ST   shift, and go to state 18
-    LBRACE    shift, and go to state 19
-
-    statement  go to state 75
-
-
-State 63
-
-   17 statement: PRINT_ST LPAREN print_list RPAREN • SEMIC
-
-    SEMIC  shift, and go to state 76
-
-
-State 64
-
-   20 print_list: print_list COMMA • print_item
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    STRING  shift, and go to state 44
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    print_item  go to state 77
-    expression  go to state 47
-
-
-State 65
-
-   18 statement: READ_ST LPAREN read_list RPAREN • SEMIC
-
-    SEMIC  shift, and go to state 78
-
-
-State 66
-
-   24 read_list: read_list COMMA • ID
-
-    ID  shift, and go to state 79
-
-
-State 67
-
-    9 const_list: const_list COMMA ID ASSIGN • expression
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 80
-
-
-State 68
-
-   31 expression: LPAREN expression RPAREN •
-
-    $default  reduce using rule 31 (expression)
-
-
-State 69
-
-   29 expression: LPAREN expression QMARK • expression COLON expression RPAREN
-
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 81
-
-
-State 70
-
-   25 expression: expression • ADD expression
-   25           | expression ADD expression •
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
-
-    $default  reduce using rule 25 (expression)
-
-
-State 71
-
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   26           | expression SUB expression •
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
-
-    $default  reduce using rule 26 (expression)
-
-
-State 72
-
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   27           | expression MUL expression •
-   28           | expression • DIV expression
-
-    $default  reduce using rule 27 (expression)
-
-
-State 73
-
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-   28           | expression DIV expression •
-
-    $default  reduce using rule 28 (expression)
-
-
-State 74
-
-   14 statement: IF_ST LPAREN expression RPAREN statement • ELSE_ST statement
-   15          | IF_ST LPAREN expression RPAREN statement •
-
-    ELSE_ST  shift, and go to state 82
-
-    $default  reduce using rule 15 (statement)
-
-
-State 75
-
-   16 statement: WHILE_ST LPAREN expression RPAREN statement •
+   16 statement: LBRACE statement_list RBRACE •
 
     $default  reduce using rule 16 (statement)
 
 
+State 51
+
+   10 var_list: var_list COMMA • ID
+
+    ID  shift, and go to state 70
+
+
+State 52
+
+    4 declarations: declarations VAR_DECL tipo $@2 var_list SEMIC •
+
+    $default  reduce using rule 4 (declarations)
+
+
+State 53
+
+   11 const_list: ID ASSIGN • expression
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 71
+
+
+State 54
+
+   12 const_list: const_list COMMA • ID ASSIGN expression
+
+    ID  shift, and go to state 72
+
+
+State 55
+
+    6 declarations: declarations CONST_DECL tipo $@3 const_list SEMIC •
+
+    $default  reduce using rule 6 (declarations)
+
+
+State 56
+
+   22 asig: ID ASSIGN • asig
+
+    ID      shift, and go to state 35
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    asig        go to state 73
+    expression  go to state 40
+
+
+State 57
+
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+   35           | SUB expression •
+
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
+
+    $default  reduce using rule 35 (expression)
+
+
+State 58
+
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+   34           | LPAREN expression • QMARK expression COLON expression RPAREN
+   36           | LPAREN expression • RPAREN
+
+    ADD     shift, and go to state 60
+    SUB     shift, and go to state 61
+    MUL     shift, and go to state 62
+    DIV     shift, and go to state 63
+    RPAREN  shift, and go to state 74
+    QMARK   shift, and go to state 75
+
+
+State 59
+
+   15 statement: ID ASSIGN asig SEMIC •
+
+    $default  reduce using rule 15 (statement)
+
+
+State 60
+
+   30 expression: expression ADD • expression
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 76
+
+
+State 61
+
+   31 expression: expression SUB • expression
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 77
+
+
+State 62
+
+   32 expression: expression MUL • expression
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 78
+
+
+State 63
+
+   33 expression: expression DIV • expression
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 79
+
+
+State 64
+
+   17 statement: IF_ST LPAREN expression RPAREN • statement ELSE_ST statement
+   18          | IF_ST LPAREN expression RPAREN • statement
+
+    ID        shift, and go to state 15
+    IF_ST     shift, and go to state 16
+    WHILE_ST  shift, and go to state 17
+    PRINT_ST  shift, and go to state 18
+    READ_ST   shift, and go to state 19
+    LBRACE    shift, and go to state 20
+
+    statement  go to state 80
+
+
+State 65
+
+   19 statement: WHILE_ST LPAREN expression RPAREN • statement
+
+    ID        shift, and go to state 15
+    IF_ST     shift, and go to state 16
+    WHILE_ST  shift, and go to state 17
+    PRINT_ST  shift, and go to state 18
+    READ_ST   shift, and go to state 19
+    LBRACE    shift, and go to state 20
+
+    statement  go to state 81
+
+
+State 66
+
+   20 statement: PRINT_ST LPAREN print_list RPAREN • SEMIC
+
+    SEMIC  shift, and go to state 82
+
+
+State 67
+
+   25 print_list: print_list COMMA • print_item
+
+    ID      shift, and go to state 41
+    STRING  shift, and go to state 44
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    print_item  go to state 83
+    expression  go to state 47
+
+
+State 68
+
+   21 statement: READ_ST LPAREN read_list RPAREN • SEMIC
+
+    SEMIC  shift, and go to state 84
+
+
+State 69
+
+   29 read_list: read_list COMMA • ID
+
+    ID  shift, and go to state 85
+
+
+State 70
+
+   10 var_list: var_list COMMA ID •
+
+    $default  reduce using rule 10 (var_list)
+
+
+State 71
+
+   11 const_list: ID ASSIGN expression •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+
+    ADD  shift, and go to state 60
+    SUB  shift, and go to state 61
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
+
+    $default  reduce using rule 11 (const_list)
+
+
+State 72
+
+   12 const_list: const_list COMMA ID • ASSIGN expression
+
+    ASSIGN  shift, and go to state 86
+
+
+State 73
+
+   22 asig: ID ASSIGN asig •
+
+    $default  reduce using rule 22 (asig)
+
+
+State 74
+
+   36 expression: LPAREN expression RPAREN •
+
+    $default  reduce using rule 36 (expression)
+
+
+State 75
+
+   34 expression: LPAREN expression QMARK • expression COLON expression RPAREN
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 87
+
+
 State 76
 
-   17 statement: PRINT_ST LPAREN print_list RPAREN SEMIC •
+   30 expression: expression • ADD expression
+   30           | expression ADD expression •
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    $default  reduce using rule 17 (statement)
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
+
+    $default  reduce using rule 30 (expression)
 
 
 State 77
 
-   20 print_list: print_list COMMA print_item •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   31           | expression SUB expression •
+   32           | expression • MUL expression
+   33           | expression • DIV expression
 
-    $default  reduce using rule 20 (print_list)
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
+
+    $default  reduce using rule 31 (expression)
 
 
 State 78
 
-   18 statement: READ_ST LPAREN read_list RPAREN SEMIC •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   32           | expression MUL expression •
+   33           | expression • DIV expression
 
-    $default  reduce using rule 18 (statement)
+    $default  reduce using rule 32 (expression)
 
 
 State 79
 
-   24 read_list: read_list COMMA ID •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+   33           | expression DIV expression •
 
-    $default  reduce using rule 24 (read_list)
+    $default  reduce using rule 33 (expression)
 
 
 State 80
 
-    9 const_list: const_list COMMA ID ASSIGN expression •
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
+   17 statement: IF_ST LPAREN expression RPAREN statement • ELSE_ST statement
+   18          | IF_ST LPAREN expression RPAREN statement •
 
-    ADD  shift, and go to state 56
-    SUB  shift, and go to state 57
-    MUL  shift, and go to state 58
-    DIV  shift, and go to state 59
+    ELSE_ST  shift, and go to state 88
 
-    $default  reduce using rule 9 (const_list)
+    $default  reduce using rule 18 (statement)
 
 
 State 81
 
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-   29           | LPAREN expression QMARK expression • COLON expression RPAREN
+   19 statement: WHILE_ST LPAREN expression RPAREN statement •
 
-    ADD    shift, and go to state 56
-    SUB    shift, and go to state 57
-    MUL    shift, and go to state 58
-    DIV    shift, and go to state 59
-    COLON  shift, and go to state 83
+    $default  reduce using rule 19 (statement)
 
 
 State 82
 
-   14 statement: IF_ST LPAREN expression RPAREN statement ELSE_ST • statement
+   20 statement: PRINT_ST LPAREN print_list RPAREN SEMIC •
 
-    ID        shift, and go to state 14
-    IF_ST     shift, and go to state 15
-    WHILE_ST  shift, and go to state 16
-    PRINT_ST  shift, and go to state 17
-    READ_ST   shift, and go to state 18
-    LBRACE    shift, and go to state 19
-
-    statement  go to state 84
+    $default  reduce using rule 20 (statement)
 
 
 State 83
 
-   29 expression: LPAREN expression QMARK expression COLON • expression RPAREN
+   25 print_list: print_list COMMA print_item •
 
-    ID      shift, and go to state 37
-    NUM     shift, and go to state 38
-    SUB     shift, and go to state 39
-    LPAREN  shift, and go to state 40
-
-    expression  go to state 85
+    $default  reduce using rule 25 (print_list)
 
 
 State 84
 
-   14 statement: IF_ST LPAREN expression RPAREN statement ELSE_ST statement •
+   21 statement: READ_ST LPAREN read_list RPAREN SEMIC •
 
-    $default  reduce using rule 14 (statement)
+    $default  reduce using rule 21 (statement)
 
 
 State 85
 
-   25 expression: expression • ADD expression
-   26           | expression • SUB expression
-   27           | expression • MUL expression
-   28           | expression • DIV expression
-   29           | LPAREN expression QMARK expression COLON expression • RPAREN
+   29 read_list: read_list COMMA ID •
 
-    ADD     shift, and go to state 56
-    SUB     shift, and go to state 57
-    MUL     shift, and go to state 58
-    DIV     shift, and go to state 59
-    RPAREN  shift, and go to state 86
+    $default  reduce using rule 29 (read_list)
 
 
 State 86
 
-   29 expression: LPAREN expression QMARK expression COLON expression RPAREN •
+   12 const_list: const_list COMMA ID ASSIGN • expression
 
-    $default  reduce using rule 29 (expression)
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 89
+
+
+State 87
+
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+   34           | LPAREN expression QMARK expression • COLON expression RPAREN
+
+    ADD    shift, and go to state 60
+    SUB    shift, and go to state 61
+    MUL    shift, and go to state 62
+    DIV    shift, and go to state 63
+    COLON  shift, and go to state 90
+
+
+State 88
+
+   17 statement: IF_ST LPAREN expression RPAREN statement ELSE_ST • statement
+
+    ID        shift, and go to state 15
+    IF_ST     shift, and go to state 16
+    WHILE_ST  shift, and go to state 17
+    PRINT_ST  shift, and go to state 18
+    READ_ST   shift, and go to state 19
+    LBRACE    shift, and go to state 20
+
+    statement  go to state 91
+
+
+State 89
+
+   12 const_list: const_list COMMA ID ASSIGN expression •
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+
+    ADD  shift, and go to state 60
+    SUB  shift, and go to state 61
+    MUL  shift, and go to state 62
+    DIV  shift, and go to state 63
+
+    $default  reduce using rule 12 (const_list)
+
+
+State 90
+
+   34 expression: LPAREN expression QMARK expression COLON • expression RPAREN
+
+    ID      shift, and go to state 41
+    NUM     shift, and go to state 36
+    SUB     shift, and go to state 37
+    LPAREN  shift, and go to state 38
+
+    expression  go to state 92
+
+
+State 91
+
+   17 statement: IF_ST LPAREN expression RPAREN statement ELSE_ST statement •
+
+    $default  reduce using rule 17 (statement)
+
+
+State 92
+
+   30 expression: expression • ADD expression
+   31           | expression • SUB expression
+   32           | expression • MUL expression
+   33           | expression • DIV expression
+   34           | LPAREN expression QMARK expression COLON expression • RPAREN
+
+    ADD     shift, and go to state 60
+    SUB     shift, and go to state 61
+    MUL     shift, and go to state 62
+    DIV     shift, and go to state 63
+    RPAREN  shift, and go to state 93
+
+
+State 93
+
+   34 expression: LPAREN expression QMARK expression COLON expression RPAREN •
+
+    $default  reduce using rule 34 (expression)

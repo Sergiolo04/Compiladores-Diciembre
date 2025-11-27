@@ -14,14 +14,15 @@
 %option yylineno
 
 %x COMENT_BLOQUE
-%x CADENA
 
 car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
 
 %%
 
 
-[ \t\r\n]+          { }
+[ \t\r]+            {  }
+
+\n                  {  }
 
 "//".*              {  }
 
@@ -29,15 +30,19 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
     linea_inicio_comentario = yylineno;
     BEGIN(COMENT_BLOQUE);
 }
+
 <COMENT_BLOQUE>"*/" { BEGIN(INITIAL); }
+
 <COMENT_BLOQUE>.    { }
+
+<COMENT_BLOQUE>\n   { }
+
 <COMENT_BLOQUE><<EOF>> {
     fprintf(stderr,
             "Comentario sin cerrar (empezó en la línea %d)\n",
             linea_inicio_comentario);
-    return 0;
+    exit(1);
 }
-
 
 "var"       { return VAR_DECL; }
 "const"     { return CONST_DECL; }
@@ -65,31 +70,34 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
 ":"         { return COLON; }
 
 
-\" {
-    linea_inicio_cadena = yylineno;
-    BEGIN(CADENA);
+
+\"([^"\n\\]|\\.)* {
+    fprintf(stderr,
+            "Hay una cadena de caracteres sin cerrar en linea %d\n",
+            yylineno);
+    exit(1);
 }
 
-<CADENA>\" {
-    BEGIN(INITIAL);
-    yylval.str = strdup(yytext); 
+
+\"([^\"\\]|\\.)*\" {
+    
+    size_t len = strlen(yytext);
+   
+    char *contenido = (char *)malloc(len - 1);  
+    if (!contenido) {
+        fprintf(stderr, "Error de memoria al procesar cadena (línea %d)\n", yylineno);
+        exit(1);
+    }
+
+   
+    strncpy(contenido, yytext + 1, len - 2);
+    contenido[len - 2] = '\0';
+
+   
+    yylval.str = contenido;
     return STRING;
 }
 
-<CADENA>\n {
-    fprintf(stderr,
-            "Cadena sin cerrar (empezó en la línea %d)\n",
-            linea_inicio_cadena);
-    BEGIN(INITIAL);
-}
-
-<CADENA>. { }  
-<CADENA><<EOF>> {
-    fprintf(stderr,
-            "Cadena sin cerrar al final del fichero (línea %d)\n",
-            linea_inicio_cadena);
-    return 0;
-}
 
 ([A-Za-z_])([A-Za-z0-9_])*  {
     if (strlen(yytext) > 32)

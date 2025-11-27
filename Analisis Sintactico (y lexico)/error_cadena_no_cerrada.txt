@@ -1,0 +1,7 @@
+prueba() {
+    var int x;
+
+    print("Cadena sin cerrar);
+
+    x = 5;
+}

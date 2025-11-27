@@ -20,6 +20,8 @@
     ListaC reduccion_const_asignacion(char *id, ListaC expr);
     ListaC reduccion_read_id(char *ident);
     ListaC reduccion_asignacion(char *ident, ListaC expr);
+    ListaC reduccion_asignacion_sin_liberar(char *ident, ListaC expr);
+
 
     char  *registro(void);
     void   liberar_registro(char *reg);
@@ -57,7 +59,7 @@
 
 /* TOKENS con campo del %union */
 %token <str> ID STRING NUM
-%type <codigo> expression statement print_list print_item statement_list declarations const_list read_list
+%type <codigo> expression statement print_list print_item statement_list declarations const_list read_list asig
 
 %token VAR_DECL CONST_DECL INT_TYPE IF_ST ELSE_ST WHILE_ST PRINT_ST READ_ST
 %token ASSIGN ADD SUB MUL DIV
@@ -143,7 +145,7 @@ statement_list
     ;
 
 statement
-    : ID ASSIGN expression SEMIC
+    : ID ASSIGN asig SEMIC
       {
         $$ = reduccion_asignacion($1, $3);
       }
@@ -159,6 +161,19 @@ statement
       { $$ = $3; }
     | READ_ST LPAREN read_list RPAREN SEMIC
       { $$ = $3; }
+    ;
+
+asig
+    : ID ASSIGN asig
+      {
+        /* asignación intermedia: NO liberamos el registro,
+           lo reutilizarán las asignaciones de más a la izquierda */
+        $$ = reduccion_asignacion_sin_liberar($1, $3);
+      }
+    | expression
+      {
+        $$ = $1;
+      }
     ;
 
 print_list
@@ -215,17 +230,6 @@ expression
 
 void yyerror(const char *s) {
     fprintf(stderr, "Error sintactico en linea %d: %s\n", yylineno, s);
-}
-
-int main(void) {
-    int res = yyparse();
-    if (res == 0 && errores_semanticos == 0) {
-        printf("Analisis sintactico y semantico correcto.\n");
-    } else if (res == 0) {
-        printf("Analisis sintactico correcto, pero hay %d errores semanticos.\n",
-               errores_semanticos);
-    }
-    return res;
 }
 
 static int existe_simbolo(const char *nombre) {
@@ -587,7 +591,7 @@ void generar_MIPS(ListaC codigo_final) {
         while (p != finalLS(tabla_de_simbolos)) {
             Simbolo s = recuperaLS(tabla_de_simbolos, p);
             if (s.tipo == CADENA) {
-                fprintf(f, "$str%d: .asciiz %s\n", s.valor, s.nombre);
+                fprintf(f, "$str%d: .asciiz \"%s\"\n", s.valor, s.nombre);
             } else {
                 fprintf(f, "_%s: .word %d\n", s.nombre, s.valor);
             }
@@ -621,4 +625,38 @@ void generar_MIPS(ListaC codigo_final) {
     fprintf(f, "syscall\n");
 
     fclose(f);
+}
+
+ListaC reduccion_asignacion_sin_liberar(char *ident, ListaC expr) {
+    if (!existe_simbolo(ident)) {
+        fprintf(stderr,
+                "Error semantico (linea %d): variable '%s' usada sin declarar\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;
+    }
+
+    if (tipo_simbolo(ident) == CONSTANTE) {
+        fprintf(stderr,
+                "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
+                yylineno, ident);
+        errores_semanticos++;
+        return expr;
+    }
+
+    if (errores_semanticos > 0) {
+        return expr;
+    }
+
+    char *reg_res = recuperaResLC(expr);
+    char *dest;
+    asprintf(&dest, "_%s", ident);
+
+    insertaLC(
+        expr,
+        finalLC(expr),
+        nueva_operacion("sw", reg_res, dest, NULL)
+    );
+
+    return expr;
 }
