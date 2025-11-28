@@ -18,11 +18,11 @@ clean:
 # EJECUCIÓN BÁSICA
 # ==========================
 
-compilar: analizador programa_minic.txt
-	./analizador < programa_minic.txt
+compilar: analizador prueba.mc
+	./analizador < prueba.mc
 
-ejecutar: analizador programa_minic.txt
-	./analizador < programa_minic.txt && java -jar Mars.jar output.asm
+ejecutar: analizador prueba.mc
+	./analizador < prueba.mc && java -jar Mars.jar output.asm
 
 
 # ===================================================
@@ -37,7 +37,3 @@ error_comentarios: analizador error_comentario_no_cerrado.txt
 
 error_cadenas: analizador error_cadena_no_cerrada.txt
 	./analizador < error_cadena_no_cerrada.txt
-
-error_sintaxis: analizador error_sintaxis_general.txt
-	./analizador < error_sintaxis_general.txt
-

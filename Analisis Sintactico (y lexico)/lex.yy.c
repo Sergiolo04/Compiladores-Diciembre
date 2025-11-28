@@ -385,8 +385,8 @@ struct yy_trans_info
 static const flex_int16_t yy_accept[73] =
     {   0,
         0,    0,    0,    0,   36,   33,    1,    2,   34,   29,
-       21,   22,   19,   17,   25,   18,   20,   32,   28,   26,
-       16,   27,   31,   31,   31,   31,   31,   31,   31,   31,
+       21,   22,   18,   16,   25,   17,   19,   32,   28,   26,
+       20,   27,   31,   31,   31,   31,   31,   31,   31,   31,
        23,   24,    6,    7,    6,   33,    1,   29,    0,   30,
         0,    4,    3,   32,   31,   31,   31,   11,   31,   31,
        31,   31,   31,    5,    0,    3,   31,   31,   10,   31,
@@ -910,27 +910,27 @@ YY_RULE_SETUP
 case 16:
 YY_RULE_SETUP
 #line 57 "lexico.l"
-{ return ASSIGN; }
+{ return ADD; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
 #line 58 "lexico.l"
-{ return ADD; }
+{ return SUB; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
 #line 59 "lexico.l"
-{ return SUB; }
+{ return MUL; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
 #line 60 "lexico.l"
-{ return MUL; }
+{ return DIV; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 61 "lexico.l"
-{ return DIV; }
+#line 62 "lexico.l"
+{ return ASSIGN; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
@@ -989,28 +989,23 @@ YY_RULE_SETUP
 {
     
     size_t len = strlen(yytext);
-   
     char *contenido = (char *)malloc(len - 1);  
     if (!contenido) {
         fprintf(stderr, "Error de memoria al procesar cadena (línea %d)\n", yylineno);
         exit(1);
     }
-
-   
     strncpy(contenido, yytext + 1, len - 2);
     contenido[len - 2] = '\0';
-
-   
     yylval.str = contenido;
     return STRING;
 }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 102 "lexico.l"
+#line 97 "lexico.l"
 {
     if (strlen(yytext) > 32)
-        fprintf(stderr, "Identificador demasiado largo (línea %d): %s\n", yylineno, yytext);
+        fprintf(stderr, "Advertencia (Línea %d): ID largo, solo se usan los primeros 32 caracteres.\n", yylineno);
 
     yylval.str = strdup(yytext);
     return ID;
@@ -1018,11 +1013,12 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 110 "lexico.l"
+#line 105 "lexico.l"
 {
-    long val = atol(yytext);
-    if (val > 2147483648)
-        fprintf(stderr, "Número fuera de rango en línea %d\n", yylineno);
+    long numero = atol(yytext);
+        if (numero > 2147483648) {
+        fprintf(stderr, "Error semántico en línea %d: Desbordamiento de entero.\n", yylineno);
+    }
 
     yylval.str = strdup(yytext);
     return NUM;
@@ -1030,7 +1026,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 119 "lexico.l"
+#line 115 "lexico.l"
 {
     fprintf(stderr,
             "Secuencia inválida \"%s\" en línea %d\n", yytext, yylineno);
@@ -1038,7 +1034,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 124 "lexico.l"
+#line 120 "lexico.l"
 {
     fprintf(stderr,
             "Carácter inesperado '%s' en línea %d\n", yytext, yylineno);
@@ -1046,10 +1042,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 129 "lexico.l"
+#line 125 "lexico.l"
 ECHO;
 	YY_BREAK
-#line 1053 "lex.yy.c"
+#line 1049 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2066,7 +2062,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 129 "lexico.l"
+#line 125 "lexico.l"
 
 
 

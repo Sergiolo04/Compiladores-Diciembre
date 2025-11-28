@@ -54,12 +54,12 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
 "read"      { return READ_ST; }
 
 
-"="         { return ASSIGN; }
 "+"         { return ADD; }
 "-"         { return SUB; }
 "*"         { return MUL; }
 "/"         { return DIV; }
 
+"="         { return ASSIGN; }
 "("         { return LPAREN; }
 ")"         { return RPAREN; }
 "{"         { return LBRACE; }
@@ -82,18 +82,13 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
 \"([^\"\\]|\\.)*\" {
     
     size_t len = strlen(yytext);
-   
     char *contenido = (char *)malloc(len - 1);  
     if (!contenido) {
         fprintf(stderr, "Error de memoria al procesar cadena (línea %d)\n", yylineno);
         exit(1);
     }
-
-   
     strncpy(contenido, yytext + 1, len - 2);
     contenido[len - 2] = '\0';
-
-   
     yylval.str = contenido;
     return STRING;
 }
@@ -101,16 +96,17 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
 
 ([A-Za-z_])([A-Za-z0-9_])*  {
     if (strlen(yytext) > 32)
-        fprintf(stderr, "Identificador demasiado largo (línea %d): %s\n", yylineno, yytext);
+        fprintf(stderr, "Advertencia (Línea %d): ID largo, solo se usan los primeros 32 caracteres.\n", yylineno);
 
     yylval.str = strdup(yytext);
     return ID;
 }
 
 [0-9]+ {
-    long val = atol(yytext);
-    if (val > 2147483648)
-        fprintf(stderr, "Número fuera de rango en línea %d\n", yylineno);
+    long numero = atol(yytext);
+        if (numero > 2147483648) {
+        fprintf(stderr, "Error semántico en línea %d: Desbordamiento de entero.\n", yylineno);
+    }
 
     yylval.str = strdup(yytext);
     return NUM;

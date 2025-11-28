@@ -75,48 +75,52 @@
     #include "listaSimbolos.h"
     #include <stdbool.h>
     #include "listaCodigo.h"
-    void generar_MIPS(ListaC codigo_final);
 
-    ListaC reduccion_NUM(char *numero);
-    ListaC reduccion_ID(char *identificador);
-    ListaC reduccion_expresion_negada(ListaC expresion);
-    ListaC reduccion_expresion_operacion_expresion(ListaC e1, ListaC e2, char *op);
-    ListaC reduccion_if_simple(ListaC condicion, ListaC bloque_if);
-    ListaC reduccion_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else);
-    ListaC reduccion_while(ListaC cond, ListaC cuerpo);
+    ListaC genera_expr_numero(char *numero);
+    ListaC genera_expr_ident(char *identificador);
+    ListaC genera_expresion_negada(ListaC expresion);
+    ListaC genera_expr_condicional(ListaC cond, ListaC expr_true, ListaC expr_false);
+    ListaC genera_if(ListaC condicion, ListaC bloque_if);
+    ListaC genera_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else);
+    ListaC genera_while(ListaC cond, ListaC cuerpo);
     ListaC reduccion_print_item_expresion(ListaC expr);
     ListaC reduccion_print_item_string(char *lexema);
     ListaC reduccion_statment_list(ListaC lista, ListaC st);
     ListaC reduccion_const_asignacion(char *id, ListaC expr);
     ListaC reduccion_read_id(char *ident);
     ListaC reduccion_asignacion(char *ident, ListaC expr);
-    ListaC reduccion_asignacion_sin_liberar(char *ident, ListaC expr);
+    ListaC reduccion_asignacion_multiple(char *ident, ListaC expr);
+    ListaC sumar_expresiones(ListaC e1, ListaC e2);
+    ListaC restar_expresiones(ListaC e1, ListaC e2);
+    ListaC multiplicar_expresiones(ListaC e1, ListaC e2);
+    ListaC dividir_expresiones(ListaC e1, ListaC e2);
 
 
     char  *registro(void);
+    void liberar_estructuras();
     void   liberar_registro(char *reg);
-    void   generar_MIPS(ListaC codigo_final);
+    void   generar_MIPS(ListaC declaraciones, ListaC sentencias);
     void   declarar_identificador(char *nombre);
-    Operacion nueva_operacion(char *operando, char *resultado,
+    Operacion new_op(char *operando, char *resultado,
                           char *argumento1, char *argumento2);
     int yylex(void);
     void yyerror(const char *s);
     extern int yylineno;
 
-    Lista tabla_de_simbolos;
+    Lista simb_table;
 
     Tipo tipo_actual;
 
-    int errores_semanticos = 0;
+    bool error_encontrado = false;
     int contador_cadenas = 0;
-    int contador_etiquetas_de_salto = 1;
+    int indice_label = 1;
     bool registros_en_uso[9];
 
-    static int existe_simbolo(const char *nombre);
-    static void insertar_simbolo(const char *nombre, Tipo t);
+    static int existe_simb_tabla(const char *nombre);
+    static void meter_simb_tabla(const char *nombre, Tipo t);
     static Tipo tipo_simbolo(const char *nombre);
 
-#line 120 "sintaxis.tab.c"
+#line 124 "sintaxis.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -576,10 +580,10 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    82,    82,    82,    97,    97,   101,   101,   109,   115,
-     121,   123,   128,   132,   141,   144,   148,   152,   154,   156,
-     158,   160,   162,   167,   173,   180,   182,   187,   189,   196,
-     198,   209,   211,   213,   215,   217,   219,   221,   223,   225
+       0,    85,    85,    85,   100,   100,   104,   104,   112,   118,
+     124,   126,   131,   135,   146,   151,   157,   161,   163,   165,
+     167,   169,   171,   176,   180,   187,   189,   198,   200,   207,
+     209,   220,   222,   224,   226,   229,   231,   233,   235,   237
 };
 #endif
 
@@ -1200,275 +1204,283 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* $@1: %empty  */
-#line 82 "sintaxis.y"
-      { tabla_de_simbolos = creaLS(); 
+#line 85 "sintaxis.y"
+      { simb_table = creaLS(); 
         for(int i=0; i<9; i++){
           registros_en_uso[i] = false;
         }
-    }
-#line 1210 "sintaxis.tab.c"
+      }
+#line 1214 "sintaxis.tab.c"
     break;
 
   case 3: /* program: $@1 ID LPAREN RPAREN LBRACE declarations statement_list RBRACE  */
-#line 88 "sintaxis.y"
+#line 91 "sintaxis.y"
       {
-        if (errores_semanticos == 0) {
-            concatenaLC((yyvsp[-2].codigo), (yyvsp[-1].codigo)); 
-            generar_MIPS((yyvsp[-2].codigo));   
+        if (!error_encontrado) {
+            generar_MIPS((yyvsp[-2].codigo), (yyvsp[-1].codigo));  
         }
+        liberar_estructuras();
       }
-#line 1221 "sintaxis.tab.c"
+#line 1225 "sintaxis.tab.c"
     break;
 
   case 4: /* $@2: %empty  */
-#line 97 "sintaxis.y"
+#line 100 "sintaxis.y"
                                    { tipo_actual = VARIABLE; }
-#line 1227 "sintaxis.tab.c"
+#line 1231 "sintaxis.tab.c"
     break;
 
   case 5: /* declarations: declarations VAR_DECL tipo $@2 var_list SEMIC  */
-#line 98 "sintaxis.y"
+#line 101 "sintaxis.y"
         {
           (yyval.codigo) = (yyvsp[-5].codigo);
         }
-#line 1235 "sintaxis.tab.c"
+#line 1239 "sintaxis.tab.c"
     break;
 
   case 6: /* $@3: %empty  */
-#line 101 "sintaxis.y"
+#line 104 "sintaxis.y"
                                      { tipo_actual = CONSTANTE; }
-#line 1241 "sintaxis.tab.c"
+#line 1245 "sintaxis.tab.c"
     break;
 
   case 7: /* declarations: declarations CONST_DECL tipo $@3 const_list SEMIC  */
-#line 102 "sintaxis.y"
+#line 105 "sintaxis.y"
         {
-        if (errores_semanticos == 0) {
+        if (!error_encontrado) {
             concatenaLC((yyvsp[-5].codigo), (yyvsp[-1].codigo)); 
         }
         (yyval.codigo) = (yyvsp[-5].codigo); 
       }
-#line 1252 "sintaxis.tab.c"
+#line 1256 "sintaxis.tab.c"
     break;
 
   case 8: /* declarations: %empty  */
-#line 109 "sintaxis.y"
+#line 112 "sintaxis.y"
         {
           (yyval.codigo) = creaLC();
         }
-#line 1260 "sintaxis.tab.c"
+#line 1264 "sintaxis.tab.c"
     break;
 
   case 9: /* tipo: INT_TYPE  */
-#line 116 "sintaxis.y"
+#line 119 "sintaxis.y"
       { }
-#line 1266 "sintaxis.tab.c"
+#line 1270 "sintaxis.tab.c"
     break;
 
   case 10: /* var_list: ID  */
-#line 122 "sintaxis.y"
+#line 125 "sintaxis.y"
       { declarar_identificador((yyvsp[0].str)); }
-#line 1272 "sintaxis.tab.c"
+#line 1276 "sintaxis.tab.c"
     break;
 
   case 11: /* var_list: var_list COMMA ID  */
-#line 124 "sintaxis.y"
+#line 127 "sintaxis.y"
       { declarar_identificador((yyvsp[0].str)); }
-#line 1278 "sintaxis.tab.c"
+#line 1282 "sintaxis.tab.c"
     break;
 
   case 12: /* const_list: ID ASSIGN expression  */
-#line 129 "sintaxis.y"
+#line 132 "sintaxis.y"
       {
         (yyval.codigo) = reduccion_const_asignacion((yyvsp[-2].str), (yyvsp[0].codigo));
       }
-#line 1286 "sintaxis.tab.c"
+#line 1290 "sintaxis.tab.c"
     break;
 
   case 13: /* const_list: const_list COMMA ID ASSIGN expression  */
-#line 133 "sintaxis.y"
+#line 136 "sintaxis.y"
       {
         ListaC nuevo = reduccion_const_asignacion((yyvsp[-2].str), (yyvsp[0].codigo));
-        if (errores_semanticos == 0) concatenaLC((yyvsp[-4].codigo), nuevo);
+        if (!error_encontrado){
+          concatenaLC((yyvsp[-4].codigo), nuevo);
+        }
         (yyval.codigo) = (yyvsp[-4].codigo);
       }
-#line 1296 "sintaxis.tab.c"
-    break;
-
-  case 14: /* statement_list: statement_list statement  */
-#line 142 "sintaxis.y"
-      { (yyval.codigo) = reduccion_statment_list((yyvsp[-1].codigo), (yyvsp[0].codigo)); }
 #line 1302 "sintaxis.tab.c"
     break;
 
+  case 14: /* statement_list: statement_list statement  */
+#line 147 "sintaxis.y"
+      { 
+        (yyval.codigo) = reduccion_statment_list((yyvsp[-1].codigo), (yyvsp[0].codigo)); 
+      }
+#line 1310 "sintaxis.tab.c"
+    break;
+
   case 15: /* statement_list: %empty  */
-#line 144 "sintaxis.y"
-      { (yyval.codigo) = creaLC(); }
-#line 1308 "sintaxis.tab.c"
+#line 151 "sintaxis.y"
+      { 
+        (yyval.codigo) = creaLC();
+      }
+#line 1318 "sintaxis.tab.c"
     break;
 
   case 16: /* statement: ID ASSIGN asig SEMIC  */
-#line 149 "sintaxis.y"
+#line 158 "sintaxis.y"
       {
         (yyval.codigo) = reduccion_asignacion((yyvsp[-3].str), (yyvsp[-1].codigo));
       }
-#line 1316 "sintaxis.tab.c"
+#line 1326 "sintaxis.tab.c"
     break;
 
   case 17: /* statement: LBRACE statement_list RBRACE  */
-#line 153 "sintaxis.y"
+#line 162 "sintaxis.y"
       { (yyval.codigo) = (yyvsp[-1].codigo); }
-#line 1322 "sintaxis.tab.c"
+#line 1332 "sintaxis.tab.c"
     break;
 
   case 18: /* statement: IF_ST LPAREN expression RPAREN statement ELSE_ST statement  */
-#line 155 "sintaxis.y"
-      { (yyval.codigo) = reduccion_if_else((yyvsp[-4].codigo), (yyvsp[-2].codigo), (yyvsp[0].codigo)); }
-#line 1328 "sintaxis.tab.c"
+#line 164 "sintaxis.y"
+      { (yyval.codigo) = genera_if_else((yyvsp[-4].codigo), (yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1338 "sintaxis.tab.c"
     break;
 
   case 19: /* statement: IF_ST LPAREN expression RPAREN statement  */
-#line 157 "sintaxis.y"
-      { (yyval.codigo) = reduccion_if_simple((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
-#line 1334 "sintaxis.tab.c"
+#line 166 "sintaxis.y"
+      { (yyval.codigo) = genera_if((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1344 "sintaxis.tab.c"
     break;
 
   case 20: /* statement: WHILE_ST LPAREN expression RPAREN statement  */
-#line 159 "sintaxis.y"
-      { (yyval.codigo) = reduccion_while((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
-#line 1340 "sintaxis.tab.c"
+#line 168 "sintaxis.y"
+      { (yyval.codigo) = genera_while((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
+#line 1350 "sintaxis.tab.c"
     break;
 
   case 21: /* statement: PRINT_ST LPAREN print_list RPAREN SEMIC  */
-#line 161 "sintaxis.y"
+#line 170 "sintaxis.y"
       { (yyval.codigo) = (yyvsp[-2].codigo); }
-#line 1346 "sintaxis.tab.c"
+#line 1356 "sintaxis.tab.c"
     break;
 
   case 22: /* statement: READ_ST LPAREN read_list RPAREN SEMIC  */
-#line 163 "sintaxis.y"
+#line 172 "sintaxis.y"
       { (yyval.codigo) = (yyvsp[-2].codigo); }
-#line 1352 "sintaxis.tab.c"
-    break;
-
-  case 23: /* asig: ID ASSIGN asig  */
-#line 168 "sintaxis.y"
-      {
-        /* asignación intermedia: NO liberamos el registro,
-           lo reutilizarán las asignaciones de más a la izquierda */
-        (yyval.codigo) = reduccion_asignacion_sin_liberar((yyvsp[-2].str), (yyvsp[0].codigo));
-      }
 #line 1362 "sintaxis.tab.c"
     break;
 
-  case 24: /* asig: expression  */
-#line 174 "sintaxis.y"
+  case 23: /* asig: ID ASSIGN asig  */
+#line 177 "sintaxis.y"
       {
-        (yyval.codigo) = (yyvsp[0].codigo);
+        (yyval.codigo) = reduccion_asignacion_multiple((yyvsp[-2].str), (yyvsp[0].codigo));
       }
 #line 1370 "sintaxis.tab.c"
     break;
 
-  case 25: /* print_list: print_item  */
+  case 24: /* asig: expression  */
 #line 181 "sintaxis.y"
+      {
+        (yyval.codigo) = (yyvsp[0].codigo);
+      }
+#line 1378 "sintaxis.tab.c"
+    break;
+
+  case 25: /* print_list: print_item  */
+#line 188 "sintaxis.y"
       { (yyval.codigo) = (yyvsp[0].codigo); }
-#line 1376 "sintaxis.tab.c"
+#line 1384 "sintaxis.tab.c"
     break;
 
   case 26: /* print_list: print_list COMMA print_item  */
-#line 183 "sintaxis.y"
-      { if (errores_semanticos == 0) concatenaLC((yyvsp[-2].codigo),(yyvsp[0].codigo)); (yyval.codigo) = (yyvsp[-2].codigo); }
-#line 1382 "sintaxis.tab.c"
+#line 190 "sintaxis.y"
+      { if (!error_encontrado){
+            concatenaLC((yyvsp[-2].codigo), (yyvsp[0].codigo)); 
+        }
+        (yyval.codigo) = (yyvsp[-2].codigo); 
+      }
+#line 1394 "sintaxis.tab.c"
     break;
 
   case 27: /* print_item: expression  */
-#line 188 "sintaxis.y"
+#line 199 "sintaxis.y"
       { (yyval.codigo) = reduccion_print_item_expresion((yyvsp[0].codigo)); }
-#line 1388 "sintaxis.tab.c"
+#line 1400 "sintaxis.tab.c"
     break;
 
   case 28: /* print_item: STRING  */
-#line 190 "sintaxis.y"
+#line 201 "sintaxis.y"
       { 
         (yyval.codigo) = reduccion_print_item_string((yyvsp[0].str));
       }
-#line 1396 "sintaxis.tab.c"
+#line 1408 "sintaxis.tab.c"
     break;
 
   case 29: /* read_list: ID  */
-#line 197 "sintaxis.y"
+#line 208 "sintaxis.y"
       { (yyval.codigo) = reduccion_read_id((yyvsp[0].str)); }
-#line 1402 "sintaxis.tab.c"
+#line 1414 "sintaxis.tab.c"
     break;
 
   case 30: /* read_list: read_list COMMA ID  */
-#line 199 "sintaxis.y"
+#line 210 "sintaxis.y"
       {
         ListaC nuevo = reduccion_read_id((yyvsp[0].str));
-        if (errores_semanticos == 0) {
+        if (!error_encontrado) {
             concatenaLC((yyvsp[-2].codigo), nuevo);
         }
         (yyval.codigo) = (yyvsp[-2].codigo);
       }
-#line 1414 "sintaxis.tab.c"
-    break;
-
-  case 31: /* expression: expression ADD expression  */
-#line 210 "sintaxis.y"
-      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "add"); }
-#line 1420 "sintaxis.tab.c"
-    break;
-
-  case 32: /* expression: expression SUB expression  */
-#line 212 "sintaxis.y"
-      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "sub"); }
 #line 1426 "sintaxis.tab.c"
     break;
 
-  case 33: /* expression: expression MUL expression  */
-#line 214 "sintaxis.y"
-      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "mul"); }
+  case 31: /* expression: expression ADD expression  */
+#line 221 "sintaxis.y"
+      { (yyval.codigo) = sumar_expresiones((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
 #line 1432 "sintaxis.tab.c"
     break;
 
-  case 34: /* expression: expression DIV expression  */
-#line 216 "sintaxis.y"
-      { (yyval.codigo) = reduccion_expresion_operacion_expresion((yyvsp[-2].codigo), (yyvsp[0].codigo), "div"); }
+  case 32: /* expression: expression SUB expression  */
+#line 223 "sintaxis.y"
+      { (yyval.codigo) = restar_expresiones((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
 #line 1438 "sintaxis.tab.c"
     break;
 
-  case 35: /* expression: LPAREN expression QMARK expression COLON expression RPAREN  */
-#line 218 "sintaxis.y"
-      { (yyval.codigo) = (yyvsp[-5].codigo); }
+  case 33: /* expression: expression MUL expression  */
+#line 225 "sintaxis.y"
+      { (yyval.codigo) = multiplicar_expresiones((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
 #line 1444 "sintaxis.tab.c"
     break;
 
-  case 36: /* expression: SUB expression  */
-#line 220 "sintaxis.y"
-      { (yyval.codigo) = reduccion_expresion_negada((yyvsp[0].codigo)); }
+  case 34: /* expression: expression DIV expression  */
+#line 227 "sintaxis.y"
+      { (yyval.codigo) = dividir_expresiones((yyvsp[-2].codigo), (yyvsp[0].codigo)); }
 #line 1450 "sintaxis.tab.c"
     break;
 
-  case 37: /* expression: LPAREN expression RPAREN  */
-#line 222 "sintaxis.y"
-      { (yyval.codigo) = (yyvsp[-1].codigo); }
+  case 35: /* expression: LPAREN expression QMARK expression COLON expression RPAREN  */
+#line 230 "sintaxis.y"
+      { (yyval.codigo) = genera_expr_condicional((yyvsp[-5].codigo), (yyvsp[-3].codigo), (yyvsp[-1].codigo)); }
 #line 1456 "sintaxis.tab.c"
     break;
 
-  case 38: /* expression: ID  */
-#line 224 "sintaxis.y"
-      { (yyval.codigo) = reduccion_ID((yyvsp[0].str)); }
+  case 36: /* expression: SUB expression  */
+#line 232 "sintaxis.y"
+      { (yyval.codigo) = genera_expresion_negada((yyvsp[0].codigo)); }
 #line 1462 "sintaxis.tab.c"
     break;
 
-  case 39: /* expression: NUM  */
-#line 226 "sintaxis.y"
-      { (yyval.codigo) = reduccion_NUM((yyvsp[0].str)); }
+  case 37: /* expression: LPAREN expression RPAREN  */
+#line 234 "sintaxis.y"
+      { (yyval.codigo) = (yyvsp[-1].codigo); }
 #line 1468 "sintaxis.tab.c"
     break;
 
+  case 38: /* expression: ID  */
+#line 236 "sintaxis.y"
+      { (yyval.codigo) = genera_expr_ident((yyvsp[0].str)); }
+#line 1474 "sintaxis.tab.c"
+    break;
 
-#line 1472 "sintaxis.tab.c"
+  case 39: /* expression: NUM  */
+#line 238 "sintaxis.y"
+      { (yyval.codigo) = genera_expr_numero((yyvsp[0].str)); }
+#line 1480 "sintaxis.tab.c"
+    break;
+
+
+#line 1484 "sintaxis.tab.c"
 
       default: break;
     }
@@ -1661,19 +1673,19 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 229 "sintaxis.y"
+#line 241 "sintaxis.y"
 
 
 void yyerror(const char *s) {
     fprintf(stderr, "Error sintactico en linea %d: %s\n", yylineno, s);
 }
 
-static int existe_simbolo(const char *nombre) {
-    PosicionLista p = buscaLS(tabla_de_simbolos, (char *)nombre);
-    return p != finalLS(tabla_de_simbolos);
+static int existe_simb_tabla(const char *nombre) {
+    PosicionLista posicion = buscaLS(simb_table, (char *)nombre);
+    return posicion != finalLS(simb_table);
 }
 
-static void insertar_simbolo(const char *nombre, Tipo t) {
+static void meter_simb_tabla(const char *nombre, Tipo t) {
     Simbolo s;
     s.nombre = strdup(nombre);
     s.tipo   = t;
@@ -1682,72 +1694,204 @@ static void insertar_simbolo(const char *nombre, Tipo t) {
     } else {
         s.valor = 0;
     }
-    insertaLS(tabla_de_simbolos, finalLS(tabla_de_simbolos), s);
+    insertaLS(simb_table, finalLS(simb_table), s);
 }
 
 static Tipo tipo_simbolo(const char *nombre) {
-    PosicionLista p = buscaLS(tabla_de_simbolos, (char *)nombre);
-    if (p == finalLS(tabla_de_simbolos)) {
-        /* No debería llamarse sin comprobar antes existe_simbolo */
+    PosicionLista posicion = buscaLS(simb_table, (char *)nombre);
+    if (posicion == finalLS(simb_table)) {
         return VARIABLE;
     }
-    Simbolo s = recuperaLS(tabla_de_simbolos, p);
+    Simbolo s = recuperaLS(simb_table, posicion);
     return s.tipo;
 }
 
 char* registro(void) {
-    for (int i = 0; i < 9; i++) {
-        if (!registros_en_uso[i]) {
-            registros_en_uso[i] = true;
-            char *reg;
-            asprintf(&reg, "$t%d", i);
-            return reg;
-        }
+    int idx = 0;
+    while (idx < 9) {
+        if (registros_en_uso[idx] == false)
+            break;
+        idx++;
     }
-    yyerror("No quedan registros libres");
-    return NULL;
+    if (idx == 9) {
+        yyerror("No hay registros disponibles");
+        return NULL;
+    }
+    registros_en_uso[idx] = true;
+    char *nombre_reg = NULL;
+    asprintf(&nombre_reg, "$t%d", idx);
+    return nombre_reg;
 }
 
-
-ListaC reduccion_NUM(char *numero){
-  if(errores_semanticos > 0) return NULL;
+ListaC genera_expr_numero(char *numero){
+  if(error_encontrado){
+    return creaLC();
+  }
   ListaC lista = creaLC();
   char *r = registro();
-  insertaLC(lista, finalLC(lista),nueva_operacion("li",r,numero,NULL));
+  insertaLC(lista, 
+            finalLC(lista),
+            new_op("li",r,numero,NULL));
   guardaResLC(lista,r); 
   return lista;
 }
 
-ListaC reduccion_ID(char *identificador){
-  if (!existe_simbolo(identificador)) {
-    fprintf(stderr, "Error semantico (linea %d): variable '%s' usada sin declarar\n", yylineno, identificador);
-    errores_semanticos++;
+ListaC genera_expr_ident(char *identificador){
+  if (!existe_simb_tabla(identificador)) {
+    fprintf(stderr, "[SEMÁNTICO] Linea %d: variable '%s' usada sin declarar\n", yylineno, identificador);
+    error_encontrado = true;
   }
-  if(errores_semanticos > 0) return NULL;
+  if(error_encontrado){
+    return creaLC();
+  }
   ListaC lista = creaLC();
   char *r = registro();
   char *id;
   asprintf(&id,"_%s",identificador);
-  insertaLC(lista, finalLC(lista), nueva_operacion("lw", r, id, NULL));
+  insertaLC(lista, 
+            finalLC(lista), 
+            new_op("lw", r, id, NULL));
   guardaResLC(lista,r);
   return lista;
 }
 
-ListaC reduccion_expresion_negada(ListaC expresion){
-  if(errores_semanticos > 0) return NULL;
-  insertaLC(expresion,finalLC(expresion),nueva_operacion("neg",recuperaResLC(expresion),recuperaResLC(expresion),0));
-  return expresion;
+ListaC genera_expresion_negada(ListaC expresion){
+    if(error_encontrado){
+      return expresion;
+    }
+    char *reg_cero = registro();
+    insertaLC(expresion, 
+              finalLC(expresion), 
+              new_op("li", reg_cero, "0", NULL));
+    char *reg_res = recuperaResLC(expresion);
+    insertaLC(expresion, 
+              finalLC(expresion), 
+              new_op("sub", reg_res, reg_cero, reg_res));
+    liberar_registro(reg_cero);
+    return expresion;
 }
 
-ListaC reduccion_expresion_operacion_expresion(ListaC expresion1, ListaC expresion2, char *operando){
-    if(errores_semanticos > 0) return NULL;
-    concatenaLC(expresion1,expresion2);
-    insertaLC(expresion1,finalLC(expresion1),nueva_operacion(operando,recuperaResLC(expresion1),recuperaResLC(expresion1),recuperaResLC(expresion2)));
-    liberar_registro(recuperaResLC(expresion2));
-    return expresion1; 
+ListaC sumar_expresiones(ListaC e1, ListaC e2) {
+    if (error_encontrado) {
+        return e1;
+    }
+    concatenaLC(e1, e2);
+    char *reg_res_dest = recuperaResLC(e1);
+    char *reg_arg2 = recuperaResLC(e2);
+    
+    Operacion op_suma = new_op(
+        "add", 
+        reg_res_dest, 
+        reg_res_dest, 
+        reg_arg2
+    );
+    insertaLC(e1, finalLC(e1), op_suma);
+    liberar_registro(reg_arg2);
+    return e1; 
 }
 
-Operacion nueva_operacion(char *operando, char *resultado,char *argumento1,char *argumenton2 ){
+ListaC restar_expresiones(ListaC e1, ListaC e2) {
+    if (error_encontrado) {
+        return e1;
+    }
+    concatenaLC(e1, e2);
+    char *reg_res_dest = recuperaResLC(e1);
+    char *reg_arg2 = recuperaResLC(e2);
+
+    Operacion op_resta = new_op(
+        "sub", 
+        reg_res_dest, 
+        reg_res_dest, 
+        reg_arg2
+    );
+    insertaLC(e1, finalLC(e1), op_resta);
+    liberar_registro(reg_arg2);
+    return e1; 
+}
+
+ListaC multiplicar_expresiones(ListaC e1, ListaC e2) {
+    if (error_encontrado) {
+        return e1;
+    }
+    concatenaLC(e1, e2);
+    char *reg_res_dest = recuperaResLC(e1);
+    char *reg_arg2 = recuperaResLC(e2);
+
+    Operacion op_multiplicacion = new_op(
+        "mul", 
+        reg_res_dest, 
+        reg_res_dest, 
+        reg_arg2
+    );
+    insertaLC(e1, finalLC(e1), op_multiplicacion);
+    liberar_registro(reg_arg2);
+    return e1; 
+}
+
+ListaC dividir_expresiones(ListaC e1, ListaC e2) {
+    if (error_encontrado) {
+        return e1;
+    }
+    concatenaLC(e1, e2);
+    char *reg_res_dest = recuperaResLC(e1);
+    char *reg_arg2 = recuperaResLC(e2);
+
+    Operacion op_division = new_op(
+        "div", 
+        reg_res_dest, 
+        reg_res_dest, 
+        reg_arg2
+    );
+    insertaLC(e1, finalLC(e1), op_division);
+    liberar_registro(reg_arg2);
+    return e1; 
+}
+
+ListaC genera_expr_condicional(ListaC cond, ListaC expr_true, ListaC expr_false) {
+    if (error_encontrado) {
+        return cond;
+    }
+    
+    char *etq_false;
+    char *etq_fin;
+    asprintf(&etq_false, "$l%d", indice_label++);
+    asprintf(&etq_fin, "$l%d", indice_label++);
+    
+    char *reg_resultado_final = registro();
+    
+    ListaC resultado = creaLC();
+    concatenaLC(resultado, cond);
+    char *reg_cond = recuperaResLC(cond);
+    
+    insertaLC(
+        resultado,
+        finalLC(resultado),
+        new_op("beqz", reg_cond, etq_false, NULL)
+    );
+    liberar_registro(reg_cond);
+
+    concatenaLC(resultado, expr_true);
+    char *reg_true = recuperaResLC(expr_true);
+    
+    insertaLC(resultado, finalLC(resultado), new_op("move", reg_resultado_final, reg_true, NULL));
+    liberar_registro(reg_true);
+    
+    insertaLC(resultado, finalLC(resultado), new_op("j", etq_fin, NULL, NULL));
+    
+    insertaLC(resultado, finalLC(resultado), new_op("etiq", etq_false, NULL, NULL));
+    concatenaLC(resultado, expr_false);
+    char *reg_false = recuperaResLC(expr_false);
+    
+    insertaLC(resultado, finalLC(resultado), new_op("move", reg_resultado_final, reg_false, NULL));
+    liberar_registro(reg_false);
+
+    insertaLC(resultado, finalLC(resultado), new_op("etiq", etq_fin, NULL, NULL));
+    
+    guardaResLC(resultado, reg_resultado_final);
+    return resultado;
+}
+
+Operacion new_op(char *operando, char *resultado,char *argumento1,char *argumenton2 ){
     Operacion operacion_creada;
     operacion_creada.op = operando;
     operacion_creada.res = resultado;
@@ -1777,230 +1921,246 @@ void liberar_registro(char *reg) {
     registros_en_uso[num] = false;
 }
 
-ListaC reduccion_if_simple(ListaC condicion, ListaC bloque_if) {
-    if (errores_semanticos > 0) return NULL;
+ListaC genera_if(ListaC condicion, ListaC bloque_if) {
+    if (error_encontrado){
+      return condicion;
+    }
     char *etq_fin;
-    asprintf(&etq_fin, "$l%d", contador_etiquetas_de_salto++);
+    asprintf(&etq_fin, "$l%d", indice_label++);
     char *reg_cond = recuperaResLC(condicion);
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("beqz", reg_cond, etq_fin, NULL)
+        new_op("beqz", reg_cond, etq_fin, NULL)
     );
     liberar_registro(reg_cond);
     concatenaLC(condicion, bloque_if);
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("etiq", etq_fin, NULL, NULL)
+        new_op("etiq", etq_fin, NULL, NULL)
     );
     return condicion;
 }
 
-ListaC reduccion_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else) {
-    if (errores_semanticos > 0) return NULL;
+ListaC genera_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else) {
+    if (error_encontrado){
+      return condicion;
+    }
     char *etq_else;
     char *etq_fin;
-    asprintf(&etq_else, "$l%d", contador_etiquetas_de_salto++);
-    asprintf(&etq_fin,  "$l%d", contador_etiquetas_de_salto++);
+    asprintf(&etq_else, "$l%d", indice_label++);
+    asprintf(&etq_fin,  "$l%d", indice_label++);
     char *reg_cond = recuperaResLC(condicion);
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("beqz", reg_cond, etq_else, NULL)
+        new_op("beqz", reg_cond, etq_else, NULL)
     );
     liberar_registro(reg_cond);
     concatenaLC(condicion, bloque_if);
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("j", etq_fin, NULL, NULL)
+        new_op("j", etq_fin, NULL, NULL)
     );
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("etiq", etq_else, NULL, NULL)
+        new_op("etiq", etq_else, NULL, NULL)
     );
     concatenaLC(condicion, bloque_else);
     insertaLC(
         condicion,
         finalLC(condicion),
-        nueva_operacion("etiq", etq_fin, NULL, NULL)
+        new_op("etiq", etq_fin, NULL, NULL)
     );
     return condicion;
 }
 
-ListaC reduccion_while(ListaC cond, ListaC cuerpo) {
-    if (errores_semanticos > 0) return NULL;
+ListaC genera_while(ListaC cond, ListaC cuerpo) {
+    if (error_encontrado){
+      return cond;
+    }
     char *etq_inicio;
     char *etq_salida;
-    asprintf(&etq_inicio, "$l%d", contador_etiquetas_de_salto++);
-    asprintf(&etq_salida, "$l%d", contador_etiquetas_de_salto++);
+    asprintf(&etq_inicio, "$l%d", indice_label++);
+    asprintf(&etq_salida, "$l%d", indice_label++);
     ListaC resultado = creaLC();
     insertaLC(resultado, 
         finalLC(resultado),
-        nueva_operacion("etiq", etq_inicio, NULL, NULL)
+        new_op("etiq", etq_inicio, NULL, NULL)
     );
     concatenaLC(resultado, cond);
     char *reg_cond = recuperaResLC(cond);
     insertaLC(resultado, 
         finalLC(resultado),
-        nueva_operacion("beqz", reg_cond, etq_salida, NULL)
+        new_op("beqz", reg_cond, etq_salida, NULL)
     );
     liberar_registro(reg_cond);
     concatenaLC(resultado, cuerpo);
     insertaLC(resultado, 
         finalLC(resultado),
-        nueva_operacion("j", etq_inicio, NULL, NULL)
+        new_op("j", etq_inicio, NULL, NULL)
     );
     insertaLC(resultado, 
         finalLC(resultado),
-        nueva_operacion("etiq", etq_salida, NULL, NULL)
+        new_op("etiq", etq_salida, NULL, NULL)
     );
     return resultado;
 }
 
 ListaC reduccion_print_item_expresion(ListaC expr) {
-    if (errores_semanticos > 0) return NULL;
-    char *rtmp = recuperaResLC(expr);
+    if (error_encontrado) {
+        return expr;
+    }
+    char *registro_valor = recuperaResLC(expr);
     insertaLC(
         expr,
         finalLC(expr),
-        nueva_operacion("move","$a0",rtmp,NULL)
+        new_op("move", "$a0", registro_valor, NULL)
     );
     insertaLC(
         expr,
         finalLC(expr),
-        nueva_operacion("li","$v0","1",NULL)
+        new_op("li", "$v0", "1", NULL)
     );
+    Operacion op_syscall = new_op("syscall", NULL, NULL, NULL);
     insertaLC(
         expr,
         finalLC(expr),
-        nueva_operacion("syscall",NULL,NULL,NULL)
+        op_syscall
     );
-    liberar_registro(rtmp);
+    liberar_registro(registro_valor);
     return expr;
 }
 
 ListaC reduccion_print_item_string(char *lexema){
-    if (errores_semanticos > 0) return NULL;
-    insertar_simbolo(lexema, CADENA);
+    if (error_encontrado){
+        return creaLC();
+    }
+    meter_simb_tabla(lexema, CADENA);
     ListaC salida = creaLC();
     char *etiqueta;
     asprintf(&etiqueta, "$str%d", contador_cadenas);
     insertaLC(
         salida,
         finalLC(salida),
-        nueva_operacion("la", "$a0", etiqueta, NULL)   // cargar dirección de la cadena
+        new_op("la", "$a0", etiqueta, NULL)
     );
     insertaLC(
         salida,
         finalLC(salida),
-        nueva_operacion("li", "$v0", "4", NULL)       // servicio print_string
+        new_op("li", "$v0", "4", NULL)
     );
     insertaLC(
         salida,
         finalLC(salida),
-        nueva_operacion("syscall", NULL, NULL, NULL)
+        new_op("syscall", NULL, NULL, NULL)
     );
     contador_cadenas++;
     return salida;
 }
 
-
 ListaC reduccion_statment_list(ListaC statement_list, ListaC statement){
-  if (errores_semanticos > 0) return NULL;
+  if (error_encontrado){ 
+    return statement_list;
+  }
   concatenaLC(statement_list, statement);
   return statement_list;
 }
 
 ListaC reduccion_const_asignacion(char *identificador, ListaC expresion_derecha) {
-    if (existe_simbolo(identificador)) {
+    if (existe_simb_tabla(identificador)) {
         fprintf(stderr,
                 "Error semantico (linea %d): identificador '%s' redeclarado\n",
                 yylineno, identificador);
-        errores_semanticos++;
+        error_encontrado = true;
         return expresion_derecha; 
     }
-    insertar_simbolo(identificador, CONSTANTE);
-    if (errores_semanticos > 0) 
+    meter_simb_tabla(identificador, CONSTANTE);
+    if (error_encontrado) {
         return expresion_derecha;
+    }
+    char *reg_res = recuperaResLC(expresion_derecha);
+    char *dest_id;
     Operacion operacion;
+    asprintf(&dest_id, "_%s", identificador);
+    operacion.arg1 = dest_id; 
+    operacion.res = reg_res;
     operacion.op = "sw";
-    operacion.arg2 = NULL;
-    asprintf(&operacion.res, "%s", recuperaResLC(expresion_derecha));
-    asprintf(&operacion.arg1, "_%s", identificador);
+    operacion.arg2 = NULL; 
     insertaLC(expresion_derecha, finalLC(expresion_derecha), operacion);
-    liberar_registro(recuperaResLC(expresion_derecha));
+    liberar_registro(reg_res); // Liberar reg_res usado por la expresión
     return expresion_derecha;
 }
 
 void declarar_identificador(char *nombre){
-    if (existe_simbolo(nombre)) {
+    if (existe_simb_tabla(nombre)) {
         fprintf(stderr,
                 "Error semantico (linea %d): variable '%s' redeclarada\n",
                 yylineno, nombre);
-        errores_semanticos++;
+        error_encontrado = true;
     } else {
-        insertar_simbolo(nombre, tipo_actual);
+        meter_simb_tabla(nombre, tipo_actual);
     }
 }
 
 ListaC reduccion_read_id(char *ident) {
-    if (!existe_simbolo(ident)) {
+    if (!existe_simb_tabla(ident)) {
         fprintf(stderr,
                 "Error semantico (linea %d): variable '%s' usada sin declarar en read\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return creaLC();
     }
     if (tipo_simbolo(ident) == CONSTANTE) {
         fprintf(stderr,
                 "Error semantico (linea %d): no se puede hacer read sobre la constante '%s'\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return creaLC();
     }
-    if (errores_semanticos > 0) {
+    if (error_encontrado) {
         return creaLC();
     }
     ListaC codigo = creaLC();
     insertaLC(
         codigo,
         finalLC(codigo),
-        nueva_operacion("li", "$v0", "5", NULL)
+        new_op("li", "$v0", "5", NULL)
     );
     insertaLC(
         codigo,
         finalLC(codigo),
-        nueva_operacion("syscall", NULL, NULL, NULL)
+        new_op("syscall", NULL, NULL, NULL)
     );
     char *dest;
     asprintf(&dest, "_%s", ident);
     insertaLC(
         codigo,
         finalLC(codigo),
-        nueva_operacion("sw", "$v0", dest, NULL)
+        new_op("sw", "$v0", dest, NULL)
     );
     return codigo;
 }
 
 ListaC reduccion_asignacion(char *ident, ListaC expr) {
-    if (!existe_simbolo(ident)) {
+    if (!existe_simb_tabla(ident)) {
         fprintf(stderr,
                 "Error semantico (linea %d): variable '%s' usada sin declarar\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return expr;   // devolvemos la lista tal cual, sin añadir sw
     }
     if (tipo_simbolo(ident) == CONSTANTE) {
         fprintf(stderr,
                 "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return expr;
     }
-    if (errores_semanticos > 0) {
+    if (error_encontrado) {
         return expr;
     }
     char *reg_res = recuperaResLC(expr);
@@ -2009,40 +2169,39 @@ ListaC reduccion_asignacion(char *ident, ListaC expr) {
     insertaLC(
         expr,
         finalLC(expr),
-        nueva_operacion("sw", reg_res, dest, NULL)
+        new_op("sw", reg_res, dest, NULL)
     );
     liberar_registro(reg_res);
     return expr;
 }
 
-void generar_MIPS(ListaC codigo_final) {
+void generar_MIPS(ListaC declaraciones, ListaC sentencias) {
+    concatenaLC(declaraciones, sentencias);
+    ListaC codigo_final = declaraciones;
     FILE *f = fopen("output.asm", "w");
     if (!f) {
         perror("No se pudo abrir output.asm");
         exit(1);
     }
     fprintf(f, ".data\n");
-    if (tabla_de_simbolos != NULL) {
-        PosicionLista p = inicioLS(tabla_de_simbolos);
-        while (p != finalLS(tabla_de_simbolos)) {
-            Simbolo s = recuperaLS(tabla_de_simbolos, p);
+    if (simb_table != NULL) {
+        PosicionLista posicion = inicioLS(simb_table);
+        while (posicion != finalLS(simb_table)) {
+            Simbolo s = recuperaLS(simb_table, posicion);
             if (s.tipo == CADENA) {
                 fprintf(f, "$str%d: .asciiz \"%s\"\n", s.valor, s.nombre);
             } else {
-                fprintf(f, "_%s: .word %d\n", s.nombre, s.valor);
+                fprintf(f, "_%s: \t.word %d\n", s.nombre, s.valor);
             }
-            p = siguienteLS(tabla_de_simbolos, p);
+            posicion = siguienteLS(simb_table, posicion);
         }
     }
-
     fprintf(f, "\n.text\n");
     fprintf(f, ".globl main\n");
     fprintf(f, "main:\n");
-
-    PosicionListaC q = inicioLC(codigo_final);
-
-    while (q != finalLC(codigo_final)) {
-        Operacion op = recuperaLC(codigo_final, q);
+    PosicionListaC posicionc = inicioLC(codigo_final);
+    while (posicionc != finalLC(codigo_final)) {
+        Operacion op = recuperaLC(codigo_final, posicionc);
 
         if (strcmp(op.op, "etiq") == 0) {
             fprintf(f, "%s:\n", op.res);
@@ -2053,22 +2212,20 @@ void generar_MIPS(ListaC codigo_final) {
             if (op.arg2) fprintf(f, ", %s", op.arg2);
             fprintf(f, "\n");
         }
-
-        q = siguienteLC(codigo_final, q);
+        posicionc = siguienteLC(codigo_final, posicionc);
     }
-
     fprintf(f, "li $v0, 10\n");
     fprintf(f, "syscall\n");
-
+    fprintf(f, "# Código generado por mi compilador MiniC\n");
     fclose(f);
 }
 
-ListaC reduccion_asignacion_sin_liberar(char *ident, ListaC expr) {
-    if (!existe_simbolo(ident)) {
+ListaC reduccion_asignacion_multiple(char *ident, ListaC expr) {
+    if (!existe_simb_tabla(ident)) {
         fprintf(stderr,
                 "Error semantico (linea %d): variable '%s' usada sin declarar\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return expr;
     }
 
@@ -2076,23 +2233,39 @@ ListaC reduccion_asignacion_sin_liberar(char *ident, ListaC expr) {
         fprintf(stderr,
                 "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
                 yylineno, ident);
-        errores_semanticos++;
+        error_encontrado = true;
         return expr;
     }
 
-    if (errores_semanticos > 0) {
+    if (error_encontrado) {
         return expr;
     }
-
-    char *reg_res = recuperaResLC(expr);
-    char *dest;
-    asprintf(&dest, "_%s", ident);
+    char *registro_fuente = recuperaResLC(expr);
+    char *destino_memoria;
+    asprintf(&destino_memoria, "_%s", ident);
+    Operacion op_sw;
+    op_sw.op = "sw";
+    op_sw.res = registro_fuente; 
+    op_sw.arg1 = destino_memoria;
+    op_sw.arg2 = NULL;
 
     insertaLC(
         expr,
         finalLC(expr),
-        nueva_operacion("sw", reg_res, dest, NULL)
+        op_sw
     );
-
     return expr;
+}
+
+void liberar_estructuras() {
+    if (simb_table != NULL) {
+        PosicionLista posicion = inicioLS(simb_table);
+        while (posicion != finalLS(simb_table)) {
+            Simbolo s = recuperaLS(simb_table, posicion);
+            free(s.nombre); 
+            posicion = siguienteLS(simb_table, posicion);
+        }
+        free(simb_table);
+    }
+    simb_table = NULL; 
 }
