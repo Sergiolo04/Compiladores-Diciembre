@@ -1,9 +1,0 @@
-prueba() {
-    var int x;
-
-    /* Esto es un comentario
-       que nunca se cierra…
-
-    x = 5;
-    print("Hola\n");
-}
