@@ -747,11 +747,10 @@ YY_DECL
 		}
 
 	{
-#line 20 "lexico.l"
+#line 18 "lexico.l"
 
 
-
-#line 755 "lex.yy.c"
+#line 754 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -820,23 +819,23 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 23 "lexico.l"
+#line 20 "lexico.l"
 {  }
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 25 "lexico.l"
+#line 22 "lexico.l"
 {  }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 27 "lexico.l"
+#line 24 "lexico.l"
 {  }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 29 "lexico.l"
+#line 26 "lexico.l"
 {
     linea_inicio_comentario = yylineno;
     BEGIN(COMENT_BLOQUE);
@@ -844,150 +843,148 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 34 "lexico.l"
+#line 31 "lexico.l"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 36 "lexico.l"
+#line 33 "lexico.l"
 { }
 	YY_BREAK
 case 7:
 /* rule 7 can match eol */
 YY_RULE_SETUP
-#line 38 "lexico.l"
+#line 35 "lexico.l"
 { }
 	YY_BREAK
 case YY_STATE_EOF(COMENT_BLOQUE):
-#line 40 "lexico.l"
+#line 37 "lexico.l"
 {
     fprintf(stderr,
             "Comentario sin cerrar (empezó en la línea %d)\n",
             linea_inicio_comentario);
-    exit(1);
+    return 0;
 }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 47 "lexico.l"
+#line 44 "lexico.l"
 { return VAR_DECL; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 48 "lexico.l"
+#line 45 "lexico.l"
 { return CONST_DECL; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 49 "lexico.l"
+#line 46 "lexico.l"
 { return INT_TYPE; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 50 "lexico.l"
+#line 47 "lexico.l"
 { return IF_ST; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 51 "lexico.l"
+#line 48 "lexico.l"
 { return ELSE_ST; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 52 "lexico.l"
+#line 49 "lexico.l"
 { return WHILE_ST; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 53 "lexico.l"
+#line 50 "lexico.l"
 { return PRINT_ST; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 54 "lexico.l"
+#line 51 "lexico.l"
 { return READ_ST; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 57 "lexico.l"
+#line 54 "lexico.l"
 { return ADD; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 58 "lexico.l"
+#line 55 "lexico.l"
 { return SUB; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 59 "lexico.l"
+#line 56 "lexico.l"
 { return MUL; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 60 "lexico.l"
+#line 57 "lexico.l"
 { return DIV; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 62 "lexico.l"
+#line 59 "lexico.l"
 { return ASSIGN; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 63 "lexico.l"
+#line 60 "lexico.l"
 { return LPAREN; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 64 "lexico.l"
+#line 61 "lexico.l"
 { return RPAREN; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 65 "lexico.l"
+#line 62 "lexico.l"
 { return LBRACE; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 66 "lexico.l"
+#line 63 "lexico.l"
 { return RBRACE; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 67 "lexico.l"
+#line 64 "lexico.l"
 { return COMMA; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 68 "lexico.l"
+#line 65 "lexico.l"
 { return SEMIC; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 69 "lexico.l"
+#line 66 "lexico.l"
 { return QMARK; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 70 "lexico.l"
+#line 67 "lexico.l"
 { return COLON; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 74 "lexico.l"
+#line 71 "lexico.l"
 {
     fprintf(stderr,
             "Hay una cadena de caracteres sin cerrar en linea %d\n",
             yylineno);
-    exit(1);
 }
 	YY_BREAK
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-#line 82 "lexico.l"
+#line 78 "lexico.l"
 {
-    
     size_t len = strlen(yytext);
     char *contenido = (char *)malloc(len - 1);  
     if (!contenido) {
@@ -1002,7 +999,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 97 "lexico.l"
+#line 92 "lexico.l"
 {
     if (strlen(yytext) > 32)
         fprintf(stderr, "Advertencia (Línea %d): ID largo, solo se usan los primeros 32 caracteres.\n", yylineno);
@@ -1013,7 +1010,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 105 "lexico.l"
+#line 100 "lexico.l"
 {
     long numero = atol(yytext);
         if (numero > 2147483648) {
@@ -1026,7 +1023,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 115 "lexico.l"
+#line 110 "lexico.l"
 {
     fprintf(stderr,
             "Secuencia inválida \"%s\" en línea %d\n", yytext, yylineno);
@@ -1034,7 +1031,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 120 "lexico.l"
+#line 115 "lexico.l"
 {
     fprintf(stderr,
             "Carácter inesperado '%s' en línea %d\n", yytext, yylineno);
@@ -1042,10 +1039,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 125 "lexico.l"
+#line 120 "lexico.l"
 ECHO;
 	YY_BREAK
-#line 1049 "lex.yy.c"
+#line 1046 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2062,7 +2059,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 125 "lexico.l"
+#line 120 "lexico.l"
 
 
 

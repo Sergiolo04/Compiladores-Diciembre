@@ -15,10 +15,7 @@
 
 %x COMENT_BLOQUE
 
-car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
-
 %%
-
 
 [ \t\r]+            {  }
 
@@ -41,7 +38,7 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
     fprintf(stderr,
             "Comentario sin cerrar (empezó en la línea %d)\n",
             linea_inicio_comentario);
-    exit(1);
+    return 0;
 }
 
 "var"       { return VAR_DECL; }
@@ -75,12 +72,10 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
     fprintf(stderr,
             "Hay una cadena de caracteres sin cerrar en linea %d\n",
             yylineno);
-    exit(1);
 }
 
 
 \"([^\"\\]|\\.)*\" {
-    
     size_t len = strlen(yytext);
     char *contenido = (char *)malloc(len - 1);  
     if (!contenido) {
@@ -112,7 +107,7 @@ car_invalido  [^[:space:][:alnum:]_(){};,=+\-*/?:\"]
     return NUM;
 }
 
-{car_invalido}+ {
+[^[:space:][:alnum:]_(){};,=+\-*/?:\"]+ {
     fprintf(stderr,
             "Secuencia inválida \"%s\" en línea %d\n", yytext, yylineno);
 }

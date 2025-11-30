@@ -59,7 +59,6 @@
     char *str; 
     ListaC codigo;
 }
-
 %token <str> ID STRING NUM
 %type <codigo> expression statement print_list print_item statement_list declarations const_list read_list asig
 
@@ -414,42 +413,31 @@ ListaC genera_expr_condicional(ListaC cond, ListaC expr_true, ListaC expr_false)
     if (error_encontrado) {
         return cond;
     }
-    
     char *etq_false;
     char *etq_fin;
     asprintf(&etq_false, "$l%d", indice_label++);
     asprintf(&etq_fin, "$l%d", indice_label++);
-    
     char *reg_resultado_final = registro();
-    
     ListaC resultado = creaLC();
     concatenaLC(resultado, cond);
     char *reg_cond = recuperaResLC(cond);
-    
     insertaLC(
         resultado,
         finalLC(resultado),
         new_op("beqz", reg_cond, etq_false, NULL)
     );
     liberar_registro(reg_cond);
-
     concatenaLC(resultado, expr_true);
     char *reg_true = recuperaResLC(expr_true);
-    
     insertaLC(resultado, finalLC(resultado), new_op("move", reg_resultado_final, reg_true, NULL));
     liberar_registro(reg_true);
-    
     insertaLC(resultado, finalLC(resultado), new_op("j", etq_fin, NULL, NULL));
-    
     insertaLC(resultado, finalLC(resultado), new_op("etiq", etq_false, NULL, NULL));
     concatenaLC(resultado, expr_false);
     char *reg_false = recuperaResLC(expr_false);
-    
     insertaLC(resultado, finalLC(resultado), new_op("move", reg_resultado_final, reg_false, NULL));
     liberar_registro(reg_false);
-
     insertaLC(resultado, finalLC(resultado), new_op("etiq", etq_fin, NULL, NULL));
-    
     guardaResLC(resultado, reg_resultado_final);
     return resultado;
 }
@@ -465,22 +453,18 @@ Operacion new_op(char *operando, char *resultado,char *argumento1,char *argument
 
 void liberar_registro(char *reg) {
     int num = -1;
-
     if (sscanf(reg, "$t%d", &num) != 1) { //si sscanf consigue leer un entero devuelve 1 (si no, devuelve 0)
         fprintf(stderr, "Error: formato de registro inválido (%s)\n", reg);
         return;
     }
-
     if (num < 0 || num >= 9) {
         fprintf(stderr, "Error: número de registro fuera de rango (%d)\n", num);
         return;
     }
-
     if (!registros_en_uso[num]) {
         fprintf(stderr, "Aviso: intento de liberar un registro que ya esta libre (%s)\n", reg);
         return;
     }
-
     registros_en_uso[num] = false;
 }
 
@@ -515,11 +499,7 @@ ListaC genera_if_else(ListaC condicion, ListaC bloque_if, ListaC bloque_else) {
     asprintf(&etq_else, "$l%d", indice_label++);
     asprintf(&etq_fin,  "$l%d", indice_label++);
     char *reg_cond = recuperaResLC(condicion);
-    insertaLC(
-        condicion,
-        finalLC(condicion),
-        new_op("beqz", reg_cond, etq_else, NULL)
-    );
+    insertaLC(condicion,finalLC(condicion),new_op("beqz", reg_cond, etq_else, NULL));
     liberar_registro(reg_cond);
     concatenaLC(condicion, bloque_if);
     insertaLC(
@@ -700,11 +680,7 @@ ListaC reduccion_read_id(char *ident) {
     );
     char *dest;
     asprintf(&dest, "_%s", ident);
-    insertaLC(
-        codigo,
-        finalLC(codigo),
-        new_op("sw", "$v0", dest, NULL)
-    );
+    insertaLC(codigo, finalLC(codigo),new_op("sw", "$v0", dest, NULL));
     return codigo;
 }
 
@@ -770,9 +746,15 @@ void generar_MIPS(ListaC declaraciones, ListaC sentencias) {
             fprintf(f, "%s:\n", op.res);
         } else {
             fprintf(f, "%s", op.op);
-            if (op.res)  fprintf(f, " %s", op.res);
-            if (op.arg1) fprintf(f, ", %s", op.arg1);
-            if (op.arg2) fprintf(f, ", %s", op.arg2);
+            if (op.res){
+              fprintf(f, " %s", op.res);
+            }
+            if (op.arg1){
+              fprintf(f, ", %s", op.arg1);
+            }
+            if (op.arg2){
+              fprintf(f, ", %s", op.arg2);
+            }
             fprintf(f, "\n");
         }
         posicionc = siguienteLC(codigo_final, posicionc);
@@ -791,7 +773,6 @@ ListaC reduccion_asignacion_multiple(char *ident, ListaC expr) {
         error_encontrado = true;
         return expr;
     }
-
     if (tipo_simbolo(ident) == CONSTANTE) {
         fprintf(stderr,
                 "Error semantico (linea %d): no se puede asignar a la constante '%s'\n",
@@ -799,7 +780,6 @@ ListaC reduccion_asignacion_multiple(char *ident, ListaC expr) {
         error_encontrado = true;
         return expr;
     }
-
     if (error_encontrado) {
         return expr;
     }
@@ -811,12 +791,7 @@ ListaC reduccion_asignacion_multiple(char *ident, ListaC expr) {
     op_sw.res = registro_fuente; 
     op_sw.arg1 = destino_memoria;
     op_sw.arg2 = NULL;
-
-    insertaLC(
-        expr,
-        finalLC(expr),
-        op_sw
-    );
+    insertaLC(expr,finalLC(expr),op_sw);
     return expr;
 }
 
